@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "io_backend.h"
 #include <stdlib.h>
 #include <string.h>
