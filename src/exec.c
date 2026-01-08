@@ -12,3 +12,20 @@ int exec_command(const char *cmd)
     return ret;
 }
 
+int exec_pipeline(/* type à définir plus tard */)
+{
+    printf("Pipeline exec\n");
+    return 0;
+}
+
+int exec_redirect(/* type à définir plus tard */)
+{
+    printf("Redirect exec\n");
+    return 0;
+}
+
+int exec_builtin(/* type à définir plus tard */)
+{
+    printf("Builtin exec\n");
+    return 0;
+}
