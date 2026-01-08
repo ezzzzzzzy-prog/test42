@@ -1,10 +1,10 @@
 #ifndef EXEC_H
 #define EXEC_H
 
-int exec_command(const char *cmd);
-int exec_pipeline(/* type à définir plus tard */);
-int exec_redirect(/* type à définir plus tard */);
-int exec_builtin(/* type à définir plus tard */);
+int execute_command(char **argv);
+
+int execute_pipeline(void);
+int execute_redirect(void);
 
 #endif /* EXEC_H */
 
