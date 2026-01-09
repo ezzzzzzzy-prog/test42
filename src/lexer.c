@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdio.h>
 
 static char *my_strdup(const char *s)
 {
@@ -32,62 +32,54 @@ struct lexer *new_lex(FILE *input)
 		return NULL;
 	}
 	lex->input = input;
-	lex->curr = 0;
+//	lex->curr = 0;
+	lex->curr_tok = NULL;
+	io_backend_init(input);
 	return lex;
 }
 
 void lexer_free(struct lexer *lex)
 {
+	if(!lex)
+	{
+		return;
+	}
+	if(lex->curr_tok)
+	{
+		free_tok(lex->curr_tok);
+	}
 	free(lex);
 }
 
 static struct token *new_tok(enum type type, char *val)
 {
 	struct token *tok = malloc(sizeof(struct token));
-	if (!tok)
+	if(!tok)
+	{
 		return NULL;
+	}
 	tok->type = type;
 	tok->val = val;
 	return tok;
 }
-/*
-static enum type keyword(const char *str)
-{
-	if(strcmp(str, "if")==0)
-		return TOK_IF;
-	if (strcmp(str, "then")==0)
-		return TOK_THEN;
-	if (strcmp(str, "elif")==0)
-		return TOK_ELIF;
-	if (strcmp(str, "else")==0)
-		return TOK_ELSE;
-	if (strcmp(str, "fi")==0)
-		return TOK_FI;
-	return TOK_WORD;
-}*/
 
 struct token *build(void)
 {
 	int in = io_backend_next();
-//	struct token *tok = malloc(sizeof(struct token));
-//	tok->value = NULL;
 	while(in == ' ' || in == '\t')
 	{
 		in = io_backend_next();
 	}
 	if(in == EOF)
 	{
-		//tok->type = TOK_EOF;
 		return new_tok(TOK_EOF, NULL);
 	}
 	if (in == '\n')
 	{
-		//tok->type = TOK_NEWLINE;
 		return new_tok(TOK_NEWLINE, NULL);
 	}
 	if (in == ';')
 	{
-		//tok->type = TOK_SEMI;
 		return new_tok(TOK_SEMI, NULL);
 	}
 	if (in == '#')
@@ -104,10 +96,7 @@ struct token *build(void)
 		{
 			return new_tok(TOK_EOF, NULL);
 		}
-		//tok->type = (in == '\n') ? TOK_NEWLINE : TOK_EOF;
-		//return tok;
 	}
-	//si aucune des conditions d'avant n'est valide, on a un mot/word
 	if (in == '\'')
 	{
 		char buff[512];
@@ -160,3 +149,34 @@ struct token *build(void)
 	}
 	return tok;
 }
+
+
+
+struct token *peek(struct lexer *lex)
+{
+	if(!lex)
+	{
+		return NULL;
+	}
+	if(!lex->curr_tok)
+	{
+		lex->curr_tok = build();
+	}
+	return lex->curr_tok;
+}
+
+
+struct token *pop(struct lexer *lex)
+{
+	if(!lex)
+	{
+		return NULL;
+	}
+	struct token *curr = peek(lex);
+	if(curr)
+	{
+		lex->curr_tok = build();
+	}
+	return curr;
+}
+

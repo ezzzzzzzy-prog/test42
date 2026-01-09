@@ -20,18 +20,22 @@ enum type
 struct token
 {
 	enum type type;
-	char *val; //pour les mots/words
+	char *val;
 };
 
 struct lexer
 {
 	FILE *input;
-	int curr;
+	struct token *curr_tok;
+	//int curr;
 };
 
 struct lexer *new_lex(FILE *input);
 struct token *build(void);
 void free_tok(struct token *tok);
 void lexer_free(struct lexer *lex);
+//struct token *list_token(void);
+struct token *peek(struct lexer *lex);
+struct token *pop(struct lexer *lex);
 
 #endif /* LEXER_H */ 
