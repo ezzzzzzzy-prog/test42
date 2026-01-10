@@ -1,42 +1,36 @@
 #include <stdlib.h>
-#include "io_backend.h"
-#include "lexer.h"
 #include <stdio.h>
 
-int main(int argc, char *argv[])
+#include "io_backend.h"
+#include "parser.h"
+#include "exec.h"
+#include "ast.h"
+
+int main(int argc, char **argv)
 {
-	if(io_backend_init(argc,argv) < 0)
-	{
-		return 1;
-	}
-/*	int c;
-	while ((c = io_backend_next()) != EOF)
-	{
-		putchar(c);
-	}
-	io_backend_close();*/
-	struct lexer *lex = new_lex(NULL);
-	struct token *tok;
+    if (io_backend_init(argc, argv) < 0)
+        return 2;
 
-	while (1)
-	{
-		tok = build();
+    struct parser *parser = new_parse();
+    if (!parser)
+    {
+        io_backend_close();
+        return 2;
+    }
 
-		printf("Token type: %d", tok->type);
-		if (tok->val)
-			printf(", value: '%s'", tok->val);
-		printf("\n");
+    struct ast *ast = parser_input(parser);
+    if (!ast)
+    {
+        parser_free(parser);
+        io_backend_close();
+        return 2;
+    }
 
-		if (tok->type == TOK_EOF)
-		{
-			free_tok(tok);
-			break;
-		}
-		free_tok(tok);
-	}
+    int status = exec_ast(ast);
 
-	lexer_free(lex);
-	io_backend_close();
-    return 0; 
+    ast_free(ast);
+    parser_free(parser);
+    io_backend_close();
+
+    return status;
 }
-
