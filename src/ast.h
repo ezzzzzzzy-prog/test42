@@ -6,6 +6,9 @@ enum ast_type
     AST_COMMAND,
     AST_LIST,
     AST_IF,
+    AST_WHILE,
+    AST_UNTIL,
+    AST_FOR,
     AST_NEGATION,
     AST_AND,
     AST_OR,
@@ -16,6 +19,29 @@ struct ast
 {
 	enum ast_type type;
 };
+
+struct  ast_while
+{
+	struct ast base;
+	struct ast *condition;
+	struct ast *body;
+};
+
+struct ast_until
+{
+	struct ast base;
+	struct ast *condition;
+	struct ast *body;
+};
+
+struct ast_for
+{
+	struct ast base;
+	char *var;
+	char **words;
+	struct ast *body;
+};
+
 struct ast_and_or
 {
     struct ast base;
@@ -67,6 +93,9 @@ struct ast *ast_pipeline_create(struct ast **cmds, size_t count);
 struct ast *create_negation(struct ast *child);
 struct ast *create_and(struct ast *left, struct ast *right);
 struct ast *create_or(struct ast *left, struct ast *right);
+struct ast *create_while(struct ast *cond, struct ast *body);
+struct ast *create_until(struct ast *cond, struct ast *body);
+struct ast *create_for(char *var, char **words, struct ast *body);
 void ast_free(struct ast *ast);
 
 #endif /* AST_H */
