@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static struct ast *parse_command(struct parser *parser);
+
 static int is_list_end(enum type t)
 {
     return t == TOK_THEN || t == TOK_ELSE || t == TOK_ELIF ||
@@ -65,17 +67,6 @@ error:
         free(words[i]);
     free(words);
     return NULL;
-}
-
-static struct ast *parse_command(struct parser *parser)
-{
-    if (!parser || !parser->curr_tok)
-        return NULL;
-//to implement
-    /*if (parser->curr_tok->type == TOK_IF)
-        return parse_rule_if(parser);*/
-
-    return parse_simple_command(parser);
 }
 
 
@@ -205,6 +196,96 @@ error:
     return NULL;
 }
 
+
+static struct ast *parse_else(struct parser *parser)
+{
+        if(!parser || !parser->curr_tok)
+        {
+                return NULL;
+        }
+        if(parser->curr_tok->type == TOK_ELIF)
+        {
+                pop(parser->lex);
+                parser->curr_tok = peek(parser->lex);
+                struct ast *elif_cond = parse_compound_list(parser);
+                if(!elif_cond)
+                {
+                        return NULL;
+                }
+                if(!parser->curr_tok || parser->curr_tok->type != TOK_THEN)
+                {
+                        ast_free(elif_cond);
+                        return NULL;
+                }
+                pop(parser->lex);
+                parser->curr_tok= peek(parser->lex);
+                struct ast *elif_body = parse_compound_list(parser);
+                if(!elif_body)
+                {
+                        ast_free(elif_body);
+                        return NULL;
+                }
+                struct ast *next_else = parse_else(parser);
+                return create_if(elif_cond, elif_body, next_else);
+        }
+        if(parser->curr_tok->type == TOK_ELSE)
+        {
+                pop(parser->lex);
+                parser->curr_tok = peek(parser->lex);
+                return parse_compound_list(parser);
+        }
+        return NULL;
+}
+
+struct ast *parse_rule_if(struct parser *parser)
+{
+        if(!parser || !parser->curr_tok || parser->curr_tok->type != TOK_IF)
+        {
+                return NULL;
+        }
+        pop(parser->lex);
+        parser->curr_tok = peek(parser->lex);
+        struct ast *condition = parse_compound_list(parser);
+        if(!condition)
+        {
+                return NULL;
+        }
+        if(!parser->curr_tok || parser->curr_tok->type != TOK_THEN)
+        {
+                ast_free(condition);
+                return NULL;
+        }
+        pop(parser->lex);
+        parser->curr_tok = peek(parser->lex);
+        struct ast *then_body = parse_compound_list(parser);
+        if(!then_body)
+        {
+                ast_free(condition);
+                return NULL;
+        }
+        struct ast *else_body = parse_else(parser);
+        if(!parser->curr_tok || parser->curr_tok->type != TOK_FI)
+        {
+                ast_free(condition);
+                ast_free(then_body);
+                ast_free(else_body);
+                return NULL;
+        }
+        pop(parser->lex);
+        parser->curr_tok = peek(parser->lex);
+        return create_if(condition, then_body, else_body);
+}
+static struct ast *parse_command(struct parser *parser)
+{
+    if (!parser || !parser->curr_tok)
+        return NULL;
+//to implement
+    if (parser->curr_tok->type == TOK_IF)
+        return parse_rule_if(parser);
+
+    return parse_simple_command(parser);
+}
+
 struct ast *parser_input(struct parser *parser)
 {
     if (!parser)
@@ -213,3 +294,5 @@ struct ast *parser_input(struct parser *parser)
         return create_list(NULL, 0);
     return parse_compound_list(parser);
 }
+
+
