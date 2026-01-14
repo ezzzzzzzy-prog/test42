@@ -71,6 +71,45 @@ struct ast *create_and(struct ast *left, struct ast *right)
     and->right = right;
     return (struct ast *)and;
 }
+struct ast *create_while(struct ast *cond, struct ast *body)
+{
+	struct ast_while *w = malloc(sizeof(*w));
+	if(!w)
+	{
+		return NULL;
+	}
+	w->base.type = AST_WHILE;
+	w->condtion = cond;
+	w->body = body;
+	return (struct ast *)w;
+}
+
+struct ast *create_until(struct ast *cond, struct ast *body)
+{
+	struct ast_until *un = malloc(sizeof(*un));
+	if(!un)
+	{
+		return NULL;
+	}
+	un->base.type = AST_UNTIL;
+	un->condition = cond;
+	un->body = body;
+	return (struct ast *)un;
+}
+
+struct ast *create_for(char *var, char **words, struct ast *body)
+{
+	struct ast_for *fo = malloc(sizeof(*fo));
+	if(!fo)
+	{
+		return NULL;
+	}
+	fo->base.type = AST_FOR;
+	fo->var = var;
+	fo->words = words;
+	fo->body = body;
+	return (struct ast *)fo;
+}
 
 struct ast *create_or(struct ast *left, struct ast *right)
 {
@@ -112,7 +151,35 @@ void ast_free(struct ast *ast)
         free(cmd->words);
         break;
     }
-
+    case AST_WHILE:
+    {
+	    struct ast_while *wh = (struct ast_while *)ast;
+	    ast_free(wh->condition);
+	    ast_free(wh->body);
+	    break;
+    }
+    case AST_UNTIL:
+    {
+	    struct ast_until *un = (struct ast_until *)ast;
+	    ast_free(un->condition);
+	    ast_free(un->body);
+	    break;
+    }
+    case AST_FOR:
+    {
+	    struct ast_for *fo = (struct ast_for *)ast;
+	    free(fo->var);
+	    if(fo->words)
+	    {
+		    for(size_t i = 0; fo->words[i];i++)
+		    {
+			    free(fo->words[i]);
+		    }
+		    free(fo->words);
+	    }
+	    ast_free(fo->body);
+	    break;
+    }
     case AST_LIST:
     {
         struct ast_list *list = (struct ast_list *)ast;
