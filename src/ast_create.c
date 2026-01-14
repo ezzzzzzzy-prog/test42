@@ -213,6 +213,13 @@ void ast_free(struct ast *ast)
         break;
     }
     case AST_AND:
+    {
+        struct ast_and_or *and_or = (struct ast_and_or *)ast;
+        ast_free(and_or->left);
+        ast_free(and_or->right);
+        break;
+    }
+ 
     case AST_OR:
     {
         struct ast_and_or *and_or = (struct ast_and_or *)ast;

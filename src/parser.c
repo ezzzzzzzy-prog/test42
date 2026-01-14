@@ -231,8 +231,9 @@ struct ast *parse_compound_list(struct parser *parser)
             break;
 
      cmd;
- 13 }   struct ast *next = parse_and_or(parser);
-        if (!next)
+    }   
+    struct ast *next = parse_and_or(parser);
+    if (!next)
             break;
 
         if (count >= cap)
@@ -335,12 +336,30 @@ struct ast *parse_rule_if(struct parser *parser)
         return create_if(condition, then_body, else_body);
 }
 
-struct ast *parse_redir_out(struct parser *parser)
+//mis en commentaire pour eviter les problemes dans make
+
+/*struct ast *parse_redir(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
         return NULL;
-    int fd = open(parser->curr_tok);
-}
+    parser->curr_tok = pop(parser->lex);
+    struct parser 
+    if ()
+    int fd = open(parser->curr_tok, O_CREATE | O_WRONLY);
+    int new_stdout = dup(STDOUT_FILENO);
+    if (dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    close(fd);
+    //la je dois executer la commande dans le stdout
+    if (dup2(new_stdout, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    close(new_stdout);
+
+}*/
 
 
 struct ast *parser_input(struct parser *parser)
