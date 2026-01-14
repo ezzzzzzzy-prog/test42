@@ -9,13 +9,22 @@ enum ast_type
     AST_NEGATION,
     AST_AND,
     AST_OR,
-    AST_PIPELINE
+    AST_PIPELINE,
+    AST_REDIRECTION
 };
 
 struct ast
 {
 	enum ast_type type;
 };
+
+struct ast_redirection
+{
+    struct ast base;
+    struct ast *left;
+    struct ast *right;
+};
+
 struct ast_and_or
 {
     struct ast base;
@@ -67,6 +76,7 @@ struct ast *ast_pipeline_create(struct ast **cmds, size_t count);
 struct ast *create_negation(struct ast *child);
 struct ast *create_and(struct ast *left, struct ast *right);
 struct ast *create_or(struct ast *left, struct ast *right);
+struct ast *create_redir(struct ast *left, struct ast *right);
 void ast_free(struct ast *ast);
 
 #endif /* AST_H */

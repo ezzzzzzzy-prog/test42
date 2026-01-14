@@ -84,6 +84,19 @@ struct ast *create_or(struct ast *left, struct ast *right)
     return (struct ast *)or;
 }
 
+struct ast *create_redir(struct ast *left, struct ast *right)
+{
+    struct ast_redirection *redir = malloc(sizeof(*redir));
+    if (!redir)
+        return NULL;
+
+    redir->base.type = AST_REDIRECTION;
+    redir->left = left;
+    redir->right = right;
+    return (struct ast *)redir;
+}
+
+
 void ast_free(struct ast *ast)
 {
     if (!ast)
@@ -138,6 +151,13 @@ void ast_free(struct ast *ast)
         struct ast_and_or *and_or = (struct ast_and_or *)ast;
         ast_free(and_or->left);
         ast_free(and_or->right);
+        break;
+    }
+    case AST_REDIRECTION:
+    {
+        struct ast_redirection *redir = (struct ast_redirection *)ast;
+        ast_free(redir->left);
+        ast_free(redir->right);
         break;
     }
     }

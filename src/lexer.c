@@ -84,17 +84,23 @@ static struct token *build(void)
     }
     if (c == '>')
     {
-        int next = io_backend_peek();
-        if (next == '>')
+        if (io_backend_peek() == '>')
         {
             io_backend_next();
-            return new_tok(TOK_DGT, NULL);
+            return new_tok(TOK_REDIR_D_OUT, NULL);
         }
-        return new_tok(TOK_GT, NULL);
+        return new_tok(TOK_REDIR_OUT, NULL);
     }
 
     if (c == '<')
-        return new_tok(TOK_LT, NULL);
+    {
+        if (io_backend_peek() == '<')
+        {
+            io_backend_next();
+            return new_tok(TOK_REDIR_D_IN, NULL);
+        }
+        return new_tok(TOK_REDIR_IN, NULL);
+    }
 
     if (c == '#')
     {

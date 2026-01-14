@@ -12,10 +12,6 @@ enum type
     TOK_FI,
     TOK_SEMI,
     TOK_NEWLINE,
-    TOK_PIPE,
-    TOK_GT,
-    TOK_LT,
-    TOK_DGT,
     TOK_FOR,
     TOK_WHILE,
     TOK_UNTIL,
@@ -24,7 +20,11 @@ enum type
     TOK_IN,
     TOK_OR,
     TOK_NOT,
-    TOK_AND
+    TOK_AND,
+    TOK_REDIR_OUT,
+    TOK_REDIR_D_OUT,
+    TOK_REDIR_D_IN,
+    TOK_REDIR_IN
 };
 
 struct token

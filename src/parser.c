@@ -215,7 +215,8 @@ struct ast *parse_compound_list(struct parser *parser)
         if (parser->curr_tok && is_list_end(parser->curr_tok->type))
             break;
 
-        struct ast *next = parse_and_or(parser);
+     cmd;
+ 13 }   struct ast *next = parse_and_or(parser);
         if (!next)
             break;
 
@@ -259,7 +260,8 @@ static struct ast *parse_else(struct parser *parser)
                 if(!elif_cond)
                 {
                         return NULL;
-                }
+            cmd;
+ 13 }    }
                 if(!parser->curr_tok || parser->curr_tok->type != TOK_THEN)
                 {
                         ast_free(elif_cond);
@@ -323,6 +325,15 @@ struct ast *parse_rule_if(struct parser *parser)
         parser->curr_tok = peek(parser->lex);
         return create_if(condition, then_body, else_body);
 }
+
+struct ast *parse_redir_out(struct parser *parser)
+{
+    if (!parser || !parser->curr_tok)
+        return NULL;
+    int fd = open(parser->curr_tok);
+
+
+
 static struct ast *parse_command(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
