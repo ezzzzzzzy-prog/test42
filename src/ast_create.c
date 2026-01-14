@@ -79,7 +79,7 @@ struct ast *create_while(struct ast *cond, struct ast *body)
 		return NULL;
 	}
 	w->base.type = AST_WHILE;
-	w->condtion = cond;
+	w->condition = cond;
 	w->body = body;
 	return (struct ast *)w;
 }

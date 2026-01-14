@@ -7,4 +7,4 @@ int io_backend_next(void);
 int io_backend_peek(void);
 void io_backend_close(void);
 
-#endif /* IO_BACKEND */
+#endif /* IO_BACKEND_H */

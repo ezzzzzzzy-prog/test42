@@ -124,7 +124,28 @@ static struct token *build(void)
         }
         return new_tok(TOK_WORD, my_strdup("&"));
     }
-
+    if(c == '"')
+    {
+	    char buff[512];
+	    int i = 0;
+	    while((c = io_backend_next()) != EOF && c != '"')
+	    {
+		    if(c == '\\')
+		    {
+			    int next = io_backend_next();
+			    if(next != EOF)
+			    {
+				    c = next;
+			    }
+		    }
+		    if(i < 511)
+		    {
+			    buff[i++] = c;
+		    }
+	    }
+	    buff[i] = '\0';
+	    return new_tok(TOK_WORD, my_strdup(buff));
+    }
     char buf[512];
     int i = 0;
     while ( c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<' 

@@ -445,7 +445,7 @@ struct ast *parse_rule_while(struct parser *parser)
 		ast_free(body);
 		return NULL;
 	}
-	parser->consume(parser);
+	parser_consume(parser);
 	return create_while(condition,body);
 }
 
@@ -457,7 +457,7 @@ struct ast *parse_rule_until(struct parser *parser)
 	}
 	parser_consume(parser);
 	struct ast *condition = parse_compound_list(parser);
-	if(!conditon)
+	if(!condition)
 	{
 		return NULL;
 	}
