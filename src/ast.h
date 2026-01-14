@@ -6,12 +6,21 @@ enum ast_type
     AST_COMMAND,
     AST_LIST,
     AST_IF,
+    AST_NEGATION,
+    AST_AND,
+    AST_OR,
     AST_PIPELINE
 };
 
 struct ast
 {
 	enum ast_type type;
+};
+struct ast_and_or
+{
+    struct ast base;
+    struct ast *left;
+    struct ast *right;
 };
 
 struct ast_pipeline
@@ -55,7 +64,9 @@ struct ast *create_if(struct ast *cond,
                       struct ast *then_body,
                       struct ast *else_body);
 struct ast *ast_pipeline_create(struct ast **cmds, size_t count);
-
+struct ast *create_negation(struct ast *child);
+struct ast *create_and(struct ast *left, struct ast *right);
+struct ast *create_or(struct ast *left, struct ast *right);
 void ast_free(struct ast *ast);
 
 #endif /* AST_H */

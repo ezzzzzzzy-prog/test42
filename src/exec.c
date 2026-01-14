@@ -113,6 +113,14 @@ static int exec_pipeline(struct ast_pipeline *p)
     free(pids);
     return status;
 }
+static int exec_negation(struct ast_negation *n)
+{
+    int status = exec_ast(n->child);
+
+    if (status == 0)
+        return 1;
+    return 0;
+}
 
 int exec_ast(struct ast *ast)
 {
@@ -152,7 +160,30 @@ int exec_ast(struct ast *ast)
         }
         case AST_PIPELINE:
             return exec_pipeline((struct ast_pipeline *)ast);
+        case AST_NEGATION:
+        {
+            struct ast_negation *n = (struct ast_negation *)ast;
+            return exec_negation(n);
+        }
+        case AST_AND:
+        {
+            struct ast_and_or *and = (struct ast_and_or *)ast;
+            int status = exec_ast(and->left);
 
+            if (status == 0)
+                return exec_ast(and->right);
+            return status;
+        }
+
+        case AST_OR:
+        {
+            struct ast_and_or *or = (struct ast_and_or *)ast;
+            int status = exec_ast(or->left);
+
+            if (status != 0)
+                return exec_ast(or->right);
+            return status;
+        }
         default:
             return 0;
     }

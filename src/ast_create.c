@@ -50,6 +50,39 @@ struct ast *ast_pipeline_create(struct ast **cmds, size_t count)
     p->count = count;
     return &p->base;
 }
+struct ast *create_negation(struct ast *child)
+{
+    struct ast_negation *n = malloc(sizeof(*n));
+    if (!n)
+        return NULL;
+
+    n->base.type = AST_NEGATION;
+    n->child = child;
+    return (struct ast *)n;
+}
+struct ast *create_and(struct ast *left, struct ast *right)
+{
+    struct ast_and_or *and = malloc(sizeof(*and));
+    if (!and)
+        return NULL;
+
+    and->base.type = AST_AND;
+    and->left = left;
+    and->right = right;
+    return (struct ast *)and;
+}
+
+struct ast *create_or(struct ast *left, struct ast *right)
+{
+    struct ast_and_or *or = malloc(sizeof(*or));
+    if (!or)
+        return NULL;
+
+    or->base.type = AST_OR;
+    or->left = left;
+    or->right = right;
+    return (struct ast *)or;
+}
 
 void ast_free(struct ast *ast)
 {
@@ -93,8 +126,21 @@ void ast_free(struct ast *ast)
             break;
         }
 
+    case AST_NEGATION:
+    {
+        struct ast_negation *n = (struct ast_negation *)ast;
+        ast_free(n->child);
+        break;
     }
-
+    case AST_AND:
+    case AST_OR:
+    {
+        struct ast_and_or *and_or = (struct ast_and_or *)ast;
+        ast_free(and_or->left);
+        ast_free(and_or->right);
+        break;
+    }
+    }
     free(ast);
 }
 

@@ -72,6 +72,14 @@ error:
 
 struct ast *parse_pipeline(struct parser *parser)
 {
+    int negated = 0;
+
+    if (parser->curr_tok && parser->curr_tok->type == TOK_NOT)
+    {
+        pop(parser->lex);
+        parser->curr_tok = peek(parser->lex);
+        negated = 1;
+    }
     size_t capacity = 4;
     size_t count = 0;
     struct ast **cmds = malloc(sizeof(*cmds) * capacity);
@@ -104,15 +112,23 @@ struct ast *parse_pipeline(struct parser *parser)
 
         cmds[count++] = cmd;
     }
+    struct ast *result;
 
     if (count == 1)
     {
-        struct ast *o = cmds[0];
+        result = cmds[0];
         free(cmds);
-        return o;
+    }
+    else
+    {
+        result = ast_pipeline_create(cmds, count);
     }
 
-    return ast_pipeline_create(cmds, count);
+    if (negated)
+        result = create_negation(result);
+
+    return result;
+
 
 error:
     for (size_t i = 0; i < count; i++)
@@ -121,10 +137,42 @@ error:
     return NULL;
 }
 
-
 struct ast *parse_and_or(struct parser *parser)
 {
-    return parse_pipeline(parser);
+    struct ast *left = parse_pipeline(parser);
+    if (!left)
+        return NULL;
+
+    while (parser->curr_tok &&
+          (parser->curr_tok->type == TOK_AND ||
+           parser->curr_tok->type == TOK_OR))
+    {
+        enum type op = parser->curr_tok->type;
+
+        pop(parser->lex);
+        parser->curr_tok = peek(parser->lex);
+
+        while (parser->curr_tok &&
+               parser->curr_tok->type == TOK_NEWLINE)
+        {
+            pop(parser->lex);
+            parser->curr_tok = peek(parser->lex);
+        }
+
+        struct ast *right = parse_pipeline(parser);
+        if (!right)
+        {
+            ast_free(left);
+            return NULL;
+        }
+
+        if (op == TOK_AND)
+            left = create_and(left, right);
+        else
+            left = create_or(left, right);
+    }
+
+    return left;
 }
 
 struct ast *parse_compound_list(struct parser *parser)
