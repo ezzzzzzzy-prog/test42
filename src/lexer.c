@@ -87,6 +87,12 @@ static struct token *build(void)
         return new_tok(TOK_SEMI, NULL);
 
     if (c == '|')
+    {
+	    if (io_backend_peek() == '|')
+	    {
+		    io_backend_next();
+		    return new_tok(TOK_OR, NULL);
+	    }
         return new_tok(TOK_PIPE, NULL);
 
     if (c == '>')
@@ -122,6 +128,15 @@ static struct token *build(void)
         buf[i] = '\0';
         return new_tok(TOK_WORD, my_strdup(buf));
     }
+    if (c == '&')
+    {
+	    if (io_backend_peek() == '&')
+	    {
+		    io_backend_next();
+		    return new_tok(TOK_AND, NULL);
+	    }
+	    return new_tok(TOK_WORD, my_strdup("&"));
+    }
 
     char buf[512];
     int i = 0;
@@ -148,6 +163,18 @@ static struct token *build(void)
         return new_tok(TOK_ELSE, NULL);
     if (strcmp(buf, "fi") == 0)
         return new_tok(TOK_FI, NULL);
+    if (strcmp(buf, "while") == 0)
+        return new_tok(TOK_WHILE, NULL);
+    if (strcmp(buf, "until") == 0)
+        return new_tok(TOK_UNTIL, NULL);
+    if (strcmp(buf, "for") == 0)
+        return new_tok(TOK_FOR, NULL);
+    if (strcmp(buf, "do") == 0)
+        return new_tok(TOK_DO, NULL);
+    if (strcmp(buf, "done") == 0)
+        return new_tok(TOK_DONE, NULL);
+    if (strcmp(buf, "IN") == 0)
+        return new_tok(TOK_IN, NULL);
 
     return new_tok(TOK_WORD, my_strdup(buf));
 }

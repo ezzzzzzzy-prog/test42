@@ -15,7 +15,15 @@ enum type
     TOK_PIPE,
     TOK_GT,
     TOK_LT,
-    TOK_DGT
+    TOK_DGT,
+    TOK_FOR,
+    TOK_WHILE,
+    TOK_UNTIL,
+    TOK_DO,
+    TOK_DONE,
+    TOK_IN,
+    TOK_OR,
+    TOK_AND
 };
 
 struct token
