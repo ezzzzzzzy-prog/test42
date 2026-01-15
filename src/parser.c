@@ -338,7 +338,7 @@ struct ast *parse_rule_if(struct parser *parser)
 
 //mis en commentaire pour eviter les problemes dans make
 
-/*struct ast *parse_redir(struct parser *parser)
+struct ast *parse_redir(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
         return NULL;
@@ -359,7 +359,7 @@ struct ast *parse_rule_if(struct parser *parser)
     }
     close(new_stdout);
 
-}*/
+
 
 
 struct ast *parser_input(struct parser *parser)

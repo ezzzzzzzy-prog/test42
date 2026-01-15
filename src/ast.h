@@ -24,8 +24,12 @@ struct ast
 struct ast_redirection
 {
     struct ast base;
+    enum type type;
     struct ast *left;
-    struct ast *right;
+    char *file;
+}
+
+    
 struct  ast_while
 {
 	struct ast base;
@@ -99,7 +103,7 @@ struct ast *ast_pipeline_create(struct ast **cmds, size_t count);
 struct ast *create_negation(struct ast *child);
 struct ast *create_and(struct ast *left, struct ast *right);
 struct ast *create_or(struct ast *left, struct ast *right);
-struct ast *create_redir(struct ast *left, struct ast *right);
+struct ast *create_redir(enum type type, struct ast *left, char *file);
 struct ast *create_while(struct ast *cond, struct ast *body);
 struct ast *create_until(struct ast *cond, struct ast *body);
 struct ast *create_for(char *var, char **words, struct ast *body);

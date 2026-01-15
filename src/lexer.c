@@ -14,6 +14,18 @@ static char *my_strdup(const char *s)
     memcpy(copy, s, len);
     return copy;
 }
+
+static char *append_char(char *buf, int *s, int *cap, char c)
+{
+	if(*s + 1 >= *cap)
+	{
+		*cap *= 2;
+		buf = realloc(buf, *cap);
+	}
+	buf[(*s)++] =c;
+	buf[*s] = '\0';
+	return buf;
+}
 void free_tok(struct token *tok)
 {
     if (!tok)
@@ -87,17 +99,32 @@ static struct token *build(void)
         if (io_backend_peek() == '>')
         {
             io_backend_next();
-            return new_tok(TOK_REDIR_D_OUT, NULL);
+            return new_tok(TOK_REDIR_APP, NULL);
         }
+	if (io_backend_peek() == '&')
+	{
+		io_backend_next();
+		return new_tok(TOK_REDIR_DUP_OUT, NULL);
+	}
+	if (io_backend_peek() == '|')
+	{
+		io_backend_next();
+		return new_tok(TOK_REDIR_FORC_OUT, NULL);
+	}
         return new_tok(TOK_REDIR_OUT, NULL);
     }
 
     if (c == '<')
     {
-        if (io_backend_peek() == '<')
+        if (io_backend_peek() == '&')
         {
             io_backend_next();
-            return new_tok(TOK_REDIR_D_IN, NULL);
+            return new_tok(TOK_REDIR_DUP_IN, NULL);
+        }
+        if (io_backend_peek() == '>')
+        {
+            io_backend_next();
+            return new_tok(TOK_REDIR_RW, NULL);
         }
         return new_tok(TOK_REDIR_IN, NULL);
     }
@@ -108,17 +135,16 @@ static struct token *build(void)
             c = io_backend_next();
         return new_tok(c == '\n' ? TOK_NEWLINE : TOK_EOF, NULL);
     }
-
     if (c == '\'')
     {
-        char buf[512];
+	    int cap = 64;
+	    int s = 0;
+        char *buf = malloc(cap);
         int i = 0;
         while ((c = io_backend_next()) != EOF && c != '\'')
         {
-            if (i < 511)
-                buf[i++] = c;
+		buf = append_char(buf, &s, &cap, c);
         }
-        buf[i] = '\0';
         return new_tok(TOK_WORD, my_strdup(buf));
     }
     if (c == '&')
@@ -130,22 +156,19 @@ static struct token *build(void)
         }
         return new_tok(TOK_WORD, my_strdup("&"));
     }
-
-    char buf[512];
-    int i = 0;
+    int cap = 64;
+    int s = 0;
+    char *buf = malloc(cap);
     while ( c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<' 
             && c != '>' && c != '!')
     {
-        if (i < 511)
-            buf[i++] = c;
+        buf = append_char(buf, &s, &cap, c);
         c = io_backend_peek();
         if (isspace(c) || c == ';' || c == '|' || c == '<' || c == '>' 
                 || c == '!')
             break;
         c = io_backend_next();
     }
-
-    buf[i] = '\0';
 
     if (strcmp(buf, "if") == 0)
         return new_tok(TOK_IF, NULL);

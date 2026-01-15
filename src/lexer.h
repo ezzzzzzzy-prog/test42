@@ -22,9 +22,12 @@ enum type
     TOK_NOT,
     TOK_AND,
     TOK_REDIR_OUT,
-    TOK_REDIR_D_OUT,
-    TOK_REDIR_D_IN,
-    TOK_REDIR_IN
+    TOK_REDIR_APP,
+    TOK_REDIR_DUP_OUT,
+    TOK_REDIR_DUP_IN,
+    TOK_REDIR_FORC_OUT,
+    TOK_REDIR_IN,
+    TOK_REDIR_RW
 };
 
 struct token
