@@ -19,7 +19,8 @@ parser.o: parser.c /run/current-system/sw/include/stdc-predef.h parser.h \
  /run/current-system/sw/include/bits/stdlib-float.h \
  /run/current-system/sw/include/string.h \
  /run/current-system/sw/include/bits/types/locale_t.h \
- /run/current-system/sw/include/bits/types/__locale_t.h
+ /run/current-system/sw/include/bits/types/__locale_t.h \
+ /nix/store/8adzgnxs3s0pbj22qhk9zjxi1fqmz3xv-gcc-14.3.0/lib/gcc/x86_64-unknown-linux-gnu/14.3.0/include/stdbool.h
 /run/current-system/sw/include/stdc-predef.h:
 parser.h:
 ast.h:
@@ -44,3 +45,4 @@ lexer.h:
 /run/current-system/sw/include/string.h:
 /run/current-system/sw/include/bits/types/locale_t.h:
 /run/current-system/sw/include/bits/types/__locale_t.h:
+/nix/store/8adzgnxs3s0pbj22qhk9zjxi1fqmz3xv-gcc-14.3.0/lib/gcc/x86_64-unknown-linux-gnu/14.3.0/include/stdbool.h:

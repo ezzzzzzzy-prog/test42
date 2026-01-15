@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdbool.h>
 #include "ast.h"
 #include "lexer.h"
 
@@ -329,9 +329,9 @@ struct ast *parse_rule_if(struct parser *parser)
 
 // mis en commentaire pour eviter les problemes dans make
 
-/*struct ast *parse_redir(struct parser *parser)
+struct ast *parse_redir(struct parser *parser)
 {
-    if (!parser || !parser->curr_tok)
+  /*   if (!parser || !parser->curr_tok)
         return NULL;
     parser->curr_tok = pop(parser->lex);
     struct parser if () int fd = open(parser->curr_tok, O_CREATE | O_WRONLY);
@@ -347,7 +347,9 @@ struct ast *parse_rule_if(struct parser *parser)
         errx(1, "failed to call dup2");
     }
     close(new_stdout);
-}*/
+    */
+    return parse_compound_list(parser);
+}
 
 struct ast *parser_input(struct parser *parser)
 {
@@ -478,7 +480,14 @@ struct ast *parse_rule_for(struct parser *parser)
     parser_consume(parser);
     return create_for(var, words, body);
 }
-
+static bool is_redirection(enum type t)
+{
+    if(t != TOK_REDIR_OUT || t != TOK_REDIR_APP || t != TOK_REDIR_DUP_OUT ||
+            t != TOK_REDIR_DUP_IN || t != TOK_REDIR_FORC_OUT ||
+            t != TOK_REDIR_IN || t != TOK_REDIR_RW)
+        return false;
+    return true;
+}
 static struct ast *parse_command(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
@@ -497,5 +506,8 @@ static struct ast *parse_command(struct parser *parser)
     {
         return parse_rule_for(parser);
     }
+    while(is_redirection(parser->curr_tok->type))
+        return parse_redir(parser);
+
     return parse_simple_command(parser);
 }

@@ -16,6 +16,7 @@
 /Makefile
 /**/Makefile
 
+*.Po
 *.o
 *.lo
 *.la
@@ -25,6 +26,6 @@
 *.exe
 /bin/
 /src/42sh
-/src/.deps
+/src/.deps/*
 .libs/
 *.lai
