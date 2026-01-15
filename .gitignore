@@ -10,7 +10,7 @@
 /ar-lib
 /ltmain.sh
 /libtool
-
+/src/
 /Makefile.in
 /**/Makefile.in
 /Makefile
@@ -25,6 +25,6 @@
 *.exe
 /bin/
 /src/42sh
-
+/src/.deps
 .libs/
 *.lai

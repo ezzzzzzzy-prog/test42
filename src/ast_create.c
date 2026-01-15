@@ -79,7 +79,7 @@ struct ast *create_while(struct ast *cond, struct ast *body)
 		return NULL;
 	}
 	w->base.type = AST_WHILE;
-	w->condtion = cond;
+	w->condition = cond;
 	w->body = body;
 	return (struct ast *)w;
 }
@@ -122,16 +122,16 @@ struct ast *create_or(struct ast *left, struct ast *right)
     or->right = right;
     return (struct ast *)or;
 }
-
-struct ast *create_redir(struct ast *left, struct ast *right)
+struct ast *create_redir(enum redir_type type, struct ast *left, char *file)
 {
     struct ast_redirection *redir = malloc(sizeof(*redir));
     if (!redir)
         return NULL;
 
     redir->base.type = AST_REDIRECTION;
+    redir->type = type;
     redir->left = left;
-    redir->right = right;
+    redir->file = file;
     return (struct ast *)redir;
 }
 
@@ -230,8 +230,8 @@ void ast_free(struct ast *ast)
     case AST_REDIRECTION:
     {
         struct ast_redirection *redir = (struct ast_redirection *)ast;
+        
         ast_free(redir->left);
-        ast_free(redir->right);
         break;
     }
     }

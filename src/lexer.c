@@ -1,9 +1,11 @@
 #include "lexer.h"
-#include "io_backend.h"
+
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+
+#include "io_backend.h"
 
 static char *my_strdup(const char *s)
 {
@@ -17,14 +19,14 @@ static char *my_strdup(const char *s)
 
 static char *append_char(char *buf, int *s, int *cap, char c)
 {
-	if(*s + 1 >= *cap)
-	{
-		*cap *= 2;
-		buf = realloc(buf, *cap);
-	}
-	buf[(*s)++] =c;
-	buf[*s] = '\0';
-	return buf;
+    if (*s + 1 >= *cap)
+    {
+        *cap *= 2;
+        buf = realloc(buf, *cap);
+    }
+    buf[(*s)++] = c;
+    buf[*s] = '\0';
+    return buf;
 }
 void free_tok(struct token *tok)
 {
@@ -46,11 +48,11 @@ struct lexer *new_lex(void)
 
 void lexer_free(struct lexer *lex)
 {
-    if(!lex)
+    if (!lex)
     {
         return;
     }
-    if(lex->curr_tok)
+    if (lex->curr_tok)
     {
         free_tok(lex->curr_tok);
     }
@@ -60,7 +62,7 @@ void lexer_free(struct lexer *lex)
 static struct token *new_tok(enum type type, char *val)
 {
     struct token *tok = malloc(sizeof(struct token));
-    if(!tok)
+    if (!tok)
     {
         return NULL;
     }
@@ -77,8 +79,8 @@ static struct token *build(void)
 
     if (c == EOF)
         return new_tok(TOK_EOF, NULL);
-    if(c == '!')
-        return new_tok(TOK_NOT,NULL);
+    if (c == '!')
+        return new_tok(TOK_NOT, NULL);
     if (c == '\n')
         return new_tok(TOK_NEWLINE, NULL);
 
@@ -92,7 +94,7 @@ static struct token *build(void)
             io_backend_next();
             return new_tok(TOK_OR, NULL);
         }
-        return new_tok(TOK_PIPE, NULL);
+        return new_tok(TOK_IN, NULL);
     }
     if (c == '>')
     {
@@ -101,16 +103,16 @@ static struct token *build(void)
             io_backend_next();
             return new_tok(TOK_REDIR_APP, NULL);
         }
-	if (io_backend_peek() == '&')
-	{
-		io_backend_next();
-		return new_tok(TOK_REDIR_DUP_OUT, NULL);
-	}
-	if (io_backend_peek() == '|')
-	{
-		io_backend_next();
-		return new_tok(TOK_REDIR_FORC_OUT, NULL);
-	}
+        if (io_backend_peek() == '&')
+        {
+            io_backend_next();
+            return new_tok(TOK_REDIR_DUP_OUT, NULL);
+        }
+        if (io_backend_peek() == '|')
+        {
+            io_backend_next();
+            return new_tok(TOK_REDIR_FORC_OUT, NULL);
+        }
         return new_tok(TOK_REDIR_OUT, NULL);
     }
 
@@ -137,13 +139,13 @@ static struct token *build(void)
     }
     if (c == '\'')
     {
-	    int cap = 64;
-	    int s = 0;
+        int cap = 64;
+        int s = 0;
         char *buf = malloc(cap);
-        int i = 0;
+        // int i = 0;
         while ((c = io_backend_next()) != EOF && c != '\'')
         {
-		buf = append_char(buf, &s, &cap, c);
+            buf = append_char(buf, &s, &cap, c);
         }
         return new_tok(TOK_WORD, my_strdup(buf));
     }
@@ -159,13 +161,13 @@ static struct token *build(void)
     int cap = 64;
     int s = 0;
     char *buf = malloc(cap);
-    while ( c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<' 
-            && c != '>' && c != '!')
+    while (c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<'
+           && c != '>' && c != '!')
     {
         buf = append_char(buf, &s, &cap, c);
         c = io_backend_peek();
-        if (isspace(c) || c == ';' || c == '|' || c == '<' || c == '>' 
-                || c == '!')
+        if (isspace(c) || c == ';' || c == '|' || c == '<' || c == '>'
+            || c == '!')
             break;
         c = io_backend_next();
     }
@@ -198,11 +200,11 @@ static struct token *build(void)
 
 struct token *peek(struct lexer *lex)
 {
-    if(!lex)
+    if (!lex)
     {
         return NULL;
     }
-    if(!lex->curr_tok)
+    if (!lex->curr_tok)
     {
         lex->curr_tok = build();
     }
