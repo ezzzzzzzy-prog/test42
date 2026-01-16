@@ -329,14 +329,24 @@ struct ast *parse_rule_if(struct parser *parser)
 
 static bool is_redirection(enum type t)
 {
-    if(t != TOK_REDIR_OUT || t != TOK_REDIR_APP || t != TOK_REDIR_DUP_OUT ||
-            t != TOK_REDIR_DUP_IN || t != TOK_REDIR_FORC_OUT ||
-            t != TOK_REDIR_IN || t != TOK_REDIR_RW)
-        return false;
-    return true;
+    if(t == TOK_REDIR_OUT)
+       return true;
+    if(t == TOK_REDIR_APP) 
+        return true;
+    if(t == TOK_REDIR_DUP_OUT)
+       return true;
+    if(t == TOK_REDIR_DUP_IN)
+       return true;
+    if(t == TOK_REDIR_FORC_OUT)
+       return true;
+    if(t == TOK_REDIR_IN)
+       return true;
+    if(t == TOK_REDIR_RW)
+        return true;
+    return false;
 }
 
-struct ast *parse_redir(struct parser *parser)
+struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
 {
 	if (!parser || !parser->curr_tok || !is_redirection(parser->curr_tok->type))
 	{
@@ -365,24 +375,7 @@ struct ast *parse_redir(struct parser *parser)
 		return NULL;
 	char *f = strdup(parser->curr_tok->val);
 	parser_consume(parser);
-	return create_redir(curr_redir_type, NULL, f);
-  /*   if (!parser || !parser->curr_tok)
-       return NULL;
-    parser->curr_tok = pop(parser->lex);
-    struct parser if () int fd = open(parser->curr_tok, O_CREATE | O_WRONLY);
-    int new_stdout = dup(STDOUT_FILENO);
-    if (dup2(fd, STDOUT_FILENO) == -1)
-    {
-        errx(1, "failed to call dup2");
-    }
-    close(fd);
-    // la je dois executer la commande dans le stdout
-    if (dup2(new_stdout, STDOUT_FILENO) == -1)
-    {
-        errx(1, "failed to call dup2");
-	}
-    close(new_stdout);
-    */
+	return create_redir(curr_redir_type, left_cmd, f);
 }
 
 struct ast *parser_input(struct parser *parser)
@@ -532,8 +525,19 @@ static struct ast *parse_command(struct parser *parser)
     {
         return parse_rule_for(parser);
     }
+    struct ast *left_cmd = NULL;
+    left_cmd = parse_simple_command(parser);
+    if(!left_cmd)
+        return NULL;
     while(parser->curr_tok &&  is_redirection(parser->curr_tok->type))
-	    return parse_redir(parser);
-
-    return parse_simple_command(parser);
+    {
+        struct ast *redir = parse_redir(parser,left_cmd);
+        if(!redir)
+        {
+            ast_free(left_cmd);
+            return NULL;
+        }
+        left_cmd = redir;
+    }
+    return left_cmd;
 }

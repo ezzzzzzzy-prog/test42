@@ -5,8 +5,9 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
-
+#include <err.h> 
 static int exec_command(char **argv)
 {
     if (!argv || !argv[0])
@@ -121,6 +122,198 @@ static int exec_negation(struct ast_negation *n)
         return 1;
     return 0;
 }
+      /*   if (!parser || !parser->curr_tok)
+       return NULL;
+    parser->curr_tok = pop(parser->lex);
+    struct parser if () int fd = open(parser->curr_tok, O_CREATE | O_WRONLY);
+    int new_stdout = dup(STDOUT_FILENO);
+    if (dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    close(fd);
+    // la je dois executer la commande dans le stdout
+    if (dup2(new_stdout, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+	}
+    close(new_stdout);
+*/
+static int redir_out(struct ast_redirection *redir, int *new_stdout)
+{
+    *new_stdout = dup(STDOUT_FILENO);
+    if (*new_stdout < 0)
+        return 1;
+    int fd = open(redir->file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd < 0)
+        return 1;
+    if(dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+/*    if (dup2(new_stdout, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+	}*/
+    close(fd);
+    return 0;
+}
+static int redir_in(struct ast_redirection *redir, int *new_stdin)
+{
+    *new_stdin = dup(STDIN_FILENO);
+    if (*new_stdin < 0)
+        return 1;
+
+    int fd = open(redir->file, O_RDONLY);
+    if (fd < 0)
+        return 1;
+
+    if(dup2(fd, STDIN_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    close(fd);
+    return 0;
+}
+static int redir_app(struct ast_redirection *redir, int *new_stdout)
+{
+    *new_stdout = dup(STDOUT_FILENO);
+    if (*new_stdout < 0)
+        return 1;
+
+    int fd = open(redir->file, O_CREAT | O_WRONLY | O_APPEND, 0644);
+    if (fd < 0)
+        return 1;
+    if(dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+
+    close(fd);
+    return 0;
+}
+static int redir_rw(struct ast_redirection *redir, int *new_stdout, int *new_stdin)
+{
+    *new_stdout = dup(STDOUT_FILENO);
+    *new_stdin = dup(STDIN_FILENO);
+    if (*new_stdout < 0 || *new_stdin < 0)
+        return 1;
+
+    int fd = open(redir->file, O_CREAT | O_RDWR, 0644);
+    if (fd < 0)
+        return 1;
+    if(dup2(fd, STDIN_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    if(dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+
+    close(fd);
+    return 0;
+}
+static int redir_force_out(struct ast_redirection *redir, int *new_stdout)
+{
+    *new_stdout = dup(STDOUT_FILENO);
+    if (*new_stdout < 0)
+        return 1;
+
+    int fd = open(redir->file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd < 0)
+        return 1;
+    if(dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+
+    close(fd);
+    return 0;
+}
+static int redir_dup_out(struct ast_redirection *redir, int *new_stdout,int *new_stderr)
+{
+    *new_stdout = dup(STDOUT_FILENO);
+    *new_stderr = dup(STDERR_FILENO);
+    if (*new_stdout < 0)
+        return 1;
+
+    int fd = open(redir->file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd < 0)
+        return 1;
+
+    if(dup2(fd, STDOUT_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    if(dup2(fd, STDERR_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+    close(fd);
+    return 0;
+}
+/*static int redir_dup_in(struct ast_redirection *redir, int *new_stdin)
+{
+    *new_stdin = dup(STDIN_FILENO);
+    if (*new_stdout < 0)
+        return 1;
+
+    int fd = open(redir->file, O_RDONLY);
+    if (fd < 0)
+        return 1;
+    if(dup2(fd, STDIN_FILENO) == -1)
+    {
+        errx(1, "failed to call dup2");
+    }
+
+    close(fd);
+    return 0;
+}*/
+static int exec_redirection(struct ast_redirection *redir)
+{
+
+    int new_stdin  = -1;
+    int new_stdout = -1;
+    int new_stderr = -1;
+    int stat = 0;
+
+    if (redir->type == AST_REDIR_OUT)
+        stat = redir_out(redir, &new_stdout);
+    else if (redir->type == AST_REDIR_IN)
+        stat = redir_in(redir, &new_stdin);
+    else if (redir->type == AST_REDIR_APP)
+        stat = redir_app(redir, &new_stdout);
+    else if (redir->type == AST_REDIR_RW)
+        stat = redir_rw(redir, &new_stdout, &new_stdin);
+    else if (redir->type == AST_REDIR_FORC_OUT)
+        stat = redir_force_out(redir, &new_stdout);
+    else if (redir->type == AST_REDIR_DUP_OUT)
+        stat = redir_dup_out(redir, &new_stdout, &new_stderr);
+    else
+        return 1;
+
+    if (stat != 0)
+        return stat;
+    stat = exec_ast(redir->left);
+    if (new_stdin != -1)
+    {
+        dup2(new_stdin, STDIN_FILENO);
+        close(new_stdin);
+    }
+    if (new_stdout != -1)
+    {
+        dup2(new_stdout, STDOUT_FILENO);
+        close(new_stdout);
+    }
+
+    if (new_stderr != -1)
+    {
+        dup2(new_stderr, STDERR_FILENO);
+        close(new_stderr);
+    }
+    return stat;
+}
 
 int exec_ast(struct ast *ast)
 {
@@ -182,6 +375,11 @@ int exec_ast(struct ast *ast)
 
             if (status != 0)
                 return exec_ast(or->right);
+            return status;
+        }
+        case AST_REDIRECTION:
+        {
+            int status = exec_redirection((struct ast_redirection *)ast);
             return status;
         }
         default:
