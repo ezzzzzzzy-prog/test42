@@ -156,7 +156,9 @@ static struct token *build(void)
             io_backend_next();
             return new_tok(TOK_AND, NULL);
         }
-        return new_tok(TOK_WORD, my_strdup("&"));
+        struct token *tok = new_tok(TOK_WORD, my_strdup("&"));
+	free(buf);
+	return tok;
     }
     int cap = 64;
     int s = 0;
@@ -173,29 +175,64 @@ static struct token *build(void)
     }
 
     if (strcmp(buf, "if") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_IF, NULL);
+    }
     if (strcmp(buf, "then") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_THEN, NULL);
+    }
     if (strcmp(buf, "elif") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_ELIF, NULL);
+    }
     if (strcmp(buf, "else") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_ELSE, NULL);
+    }
     if (strcmp(buf, "fi") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_FI, NULL);
+    }
     if (strcmp(buf, "while") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_WHILE, NULL);
+    }
     if (strcmp(buf, "until") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_UNTIL, NULL);
+    }
     if (strcmp(buf, "for") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_FOR, NULL);
+    }
     if (strcmp(buf, "do") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_DO, NULL);
+    }
     if (strcmp(buf, "done") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_DONE, NULL);
+    }
     if (strcmp(buf, "in") == 0)
+    {
+	    free(buf);
         return new_tok(TOK_IN, NULL);
+    }
 
-    return new_tok(TOK_WORD, my_strdup(buf));
+    struct token *tok = new_tok(TOK_WORD, my_strdup(buf));
+    free(buf);
+    return tok;
 }
 
 struct token *peek(struct lexer *lex)
