@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <err.h> 
+
+
 static int exec_command(char **argv)
 {
     if (!argv || !argv[0])
@@ -39,17 +41,62 @@ static int exec_command(char **argv)
 
     return 1;
 }
+
+static int exec_while(struct ast_while *w)
+{
+    int status = 0;
+    while (1)
+    {
+        int cond = exec_ast(w->condition);
+        if (cond != 0)
+            break;
+        status = exec_ast(w->body);
+    }
+    return status;
+}
+
+static int exec_until(struct ast_until *u)
+{
+    int status = 0;
+    while (1)
+    {
+        int cond = exec_ast(u->condition);
+        if (cond == 0)
+            break;
+        status = exec_ast(u->body);
+    }
+    return status;
+}
+
+static int exec_for(struct ast_for *f)
+{
+    int status = 0;
+    if (!f->words || !f->words[0])
+        return exec_ast(f->body);
+    for (size_t i = 0; f->words[i]; i++)
+    {
+        status = exec_ast(f->body);
+    }
+    return sta
 static int exec_pipeline(struct ast_pipeline *p)
 {
+        if(!p || p->count == 0)
+        {
+                return 0;
+        }
+        if(p->count == 1)
+        {
+                return exec_ast(p->cmds[0]);
+        }
     int prev_fd = -1;
-    int status = 0;
-    pid_t *pids = calloc(p->count, sizeof(pid_t));
+    //int status = 0;
+    pid_t *pids = malloc(p->count * sizeof(pid_t));
     if (!pids)
         return 1;
-
+    int pipefd[2];
     for (size_t i = 0; i < p->count; i++)
     {
-        int pipefd[2] = { -1, -1 };
+        //int pipefd[2] = { -1, -1 };
 
         if (i + 1 < p->count)
         {
@@ -76,8 +123,18 @@ static int exec_pipeline(struct ast_pipeline *p)
                 dup2(prev_fd, STDIN_FILENO);
                 close(prev_fd);
             }
+            if( i + 1 < p->count)
+            {
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(pipefd[1]);
+                    close(pipefd[0]);
+            }
+            if(prev_fd != -1)
+            {
+                    close(prev_fd);
+            }
 
-            if (pipefd[1] != -1)
+            /*if (pipefd[1] != -1)
             {
                 dup2(pipefd[1], STDOUT_FILENO);
                 close(pipefd[1]);
@@ -85,11 +142,13 @@ static int exec_pipeline(struct ast_pipeline *p)
 
             if (pipefd[0] != -1)
                 close(pipefd[0]);
-
-            struct ast_cmd *cmd = (struct ast_cmd *)p->cmds[i];
+             */
+            /*struct ast_cmd *cmd = (struct ast_cmd *)p->cmds[i];
             execvp(cmd->words[0], cmd->words);
             perror(cmd->words[0]);
-            _exit(127);
+            _exit(127);*/
+            int child = exec_ast(p->cmds[i]);
+            exit(child);
         }
 
         pids[i] = pid;
@@ -97,12 +156,13 @@ static int exec_pipeline(struct ast_pipeline *p)
         if (prev_fd != -1)
             close(prev_fd);
 
-        if (pipefd[1] != -1)
+        if (i +1 < p->count)
+        {
             close(pipefd[1]);
-
-        prev_fd = pipefd[0];
+            prev_fd = pipefd[0];
+        }
     }
-
+    int status = 0;
     for (size_t i = 0; i < p->count; i++)
     {
         int wstatus;
@@ -350,6 +410,23 @@ int exec_ast(struct ast *ast)
                 return exec_ast(ifn->else_body);
 
             return cond;
+        }
+	case AST_WHILE:
+        {
+                printf("DEBUG: Executing WHILE\n");
+                struct ast_while *w = (struct ast_while *)ast;
+                return exec_while(w);
+        }
+        case AST_UNTIL:
+        {
+                printf("DEBUG: Executing UNTIL\n");
+                struct ast_until *u = (struct ast_until *)ast;
+                return exec_until(u);
+        }
+        case AST_FOR:
+        {
+                struct ast_for *f = (struct ast_for *)ast;
+            return exec_for(f);
         }
         case AST_PIPELINE:
             return exec_pipeline((struct ast_pipeline *)ast);
