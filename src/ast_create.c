@@ -230,7 +230,7 @@ void ast_free(struct ast *ast)
     case AST_REDIRECTION:
     {
         struct ast_redirection *redir = (struct ast_redirection *)ast;
-        
+       free(redir->file);	
         ast_free(redir->left);
         break;
     }

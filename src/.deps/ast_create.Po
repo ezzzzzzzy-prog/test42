@@ -1,33 +1,34 @@
-ast_create.o: ast_create.c /run/current-system/sw/include/stdc-predef.h \
- /run/current-system/sw/include/stdlib.h \
- /run/current-system/sw/include/bits/libc-header-start.h \
- /run/current-system/sw/include/features.h \
- /run/current-system/sw/include/features-time64.h \
- /run/current-system/sw/include/bits/wordsize.h \
- /run/current-system/sw/include/bits/timesize.h \
- /run/current-system/sw/include/sys/cdefs.h \
- /run/current-system/sw/include/bits/long-double.h \
- /run/current-system/sw/include/gnu/stubs.h \
- /run/current-system/sw/include/gnu/stubs-64.h \
- /nix/store/8adzgnxs3s0pbj22qhk9zjxi1fqmz3xv-gcc-14.3.0/lib/gcc/x86_64-unknown-linux-gnu/14.3.0/include/stddef.h \
- /run/current-system/sw/include/bits/floatn.h \
- /run/current-system/sw/include/bits/floatn-common.h \
- /run/current-system/sw/include/bits/stdlib-bsearch.h \
- /run/current-system/sw/include/bits/stdlib-float.h ast.h
-/run/current-system/sw/include/stdc-predef.h:
-/run/current-system/sw/include/stdlib.h:
-/run/current-system/sw/include/bits/libc-header-start.h:
-/run/current-system/sw/include/features.h:
-/run/current-system/sw/include/features-time64.h:
-/run/current-system/sw/include/bits/wordsize.h:
-/run/current-system/sw/include/bits/timesize.h:
-/run/current-system/sw/include/sys/cdefs.h:
-/run/current-system/sw/include/bits/long-double.h:
-/run/current-system/sw/include/gnu/stubs.h:
-/run/current-system/sw/include/gnu/stubs-64.h:
-/nix/store/8adzgnxs3s0pbj22qhk9zjxi1fqmz3xv-gcc-14.3.0/lib/gcc/x86_64-unknown-linux-gnu/14.3.0/include/stddef.h:
-/run/current-system/sw/include/bits/floatn.h:
-/run/current-system/sw/include/bits/floatn-common.h:
-/run/current-system/sw/include/bits/stdlib-bsearch.h:
-/run/current-system/sw/include/bits/stdlib-float.h:
+ast_create.o: ast_create.c /usr/include/stdc-predef.h \
+ /usr/include/stdlib.h \
+ /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+ /usr/include/features.h /usr/include/features-time64.h \
+ /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+ /usr/include/x86_64-linux-gnu/bits/timesize.h \
+ /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+ /usr/include/x86_64-linux-gnu/bits/long-double.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
+ /usr/include/x86_64-linux-gnu/bits/floatn.h \
+ /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib.h ast.h
+/usr/include/stdc-predef.h:
+/usr/include/stdlib.h:
+/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
+/usr/include/features.h:
+/usr/include/features-time64.h:
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+/usr/include/x86_64-linux-gnu/bits/timesize.h:
+/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
+/usr/include/x86_64-linux-gnu/bits/floatn.h:
+/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
+/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:
+/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
+/usr/include/x86_64-linux-gnu/bits/stdlib.h:
 ast.h:
