@@ -78,6 +78,67 @@ static const char *find_var(const char *name, struct variable *var)
     return "";
 }
 
+static int expand_special(struct special *spe, char spe_char, char **res, size_t *j, size_t *size)
+{
+	if(spe && spe->args)
+		return 1;
+
+                            for(int l = 0; l < spe->argc_count; l++)
+                            {
+                                    if(!copy(spe->args[l], res, j, size))
+                                    {
+                                            return 0;
+                                    }
+                                    if(spe_char == '@' && l +1 < spe->argc_count)
+                                    {
+                                            if( *j >= *size - 1 && !agrandir(res, size))
+                                            {
+                                                    return 0;
+                                            }
+                                            (*res)[(*j)++] = ' ';
+                                    }
+                            }
+			    return 1;
+}
+
+static int expand_braced_var(struct parser *parser, const char *word, size_t *i, char **res, size_t *j, size_t *size)
+{
+	(*i)++;
+	char *name = var_normal(word, i, 1);
+                    if(!name)
+                    {
+                            //free(res);
+                            return 0;
+                    }
+                    const char *val = find_var(name, parser->var);
+                    if(!copy(val, res,j, size))
+                    {
+                            free(name);
+                            //free(res);
+                            return 0;
+                    }
+                    free(name);
+		    return 1;
+}
+
+static int expand_simple_var(struct parser *parser, const char *word, size_t *i, char **res, size_t *j, size_t *size)
+{
+	char *name = var_normal(word, i, 0);
+            if(!name)
+            {
+                    //free(res);
+                    return 0;
+            }
+            const char *val = find_var(name, parser->var);
+            if(!copy(val, res, j, size))
+            {
+                    free(name);
+                    //free(res);
+                    return 0;
+            }
+            free(name);
+	    return 1;
+}
 
 char *expand(struct parser *parser,struct special *spe, const char *word)
 {
@@ -105,9 +166,10 @@ char *expand(struct parser *parser,struct special *spe, const char *word)
             }
             if(word[i] == '@' || word[i] == '*')
             {
-                    char spe_char = word[i];
-                    i++;
-                    if(spe && spe->args)
+                    char spe_char = word[i++];
+		    if (!expand_special(spe,spe_char, &res, &j, &size))
+			    return NULL;
+                    /*if(spe && spe->args)
                     {
                             for(int l = 0; l < spe->argc_count; l++)
                             {
@@ -125,11 +187,11 @@ char *expand(struct parser *parser,struct special *spe, const char *word)
                                     }
                             }
                     }
-                    continue;
+                    continue;*/
             }
             if(word[i] == '{')
             {
-                    i++;
+                    /*i++;
                     char *name = var_normal(word, &i, 1);
                     if(!name)
                     {
@@ -143,14 +205,16 @@ char *expand(struct parser *parser,struct special *spe, const char *word)
                             free(res);
                             return NULL;
                     }
-                    free(name);
+                    free(name);*/
+		    if (!expand_braced_var(parser, word, &i, &res, &j, &size))
+			    return NULL;
                     if(word[i] == '}')
                     {
                             i++;
                     }
                     continue;
             }
-            char *name = var_normal(word, &i, 0);
+            /*char *name = var_normal(word, &i, 0);
             if(!name)
             {
                     free(res);
@@ -163,7 +227,9 @@ char *expand(struct parser *parser,struct special *spe, const char *word)
                     free(res);
                     return NULL;
             }
-            free(name);
+            free(name);*/
+	    if (!expand_simple_var(parser, word, &i, &res, &j, &size))
+		    return NULL;
         }
         else
         {

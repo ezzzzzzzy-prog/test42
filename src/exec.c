@@ -102,6 +102,29 @@ static int exec_for(struct ast_for *f)
     }
     return status;
 }*/
+
+static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd, int pipefd[2])
+{
+	if (prev_fd != -1)
+            {
+                dup2(prev_fd, STDIN_FILENO);
+                close(prev_fd);
+            }
+            if( i + 1 < p->count)
+            {
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(pipefd[1]);
+                    close(pipefd[0]);
+            }
+            if(prev_fd != -1)
+            {
+                    close(prev_fd);
+            }
+            int child = exec_ast(p->cmds[i]);
+            exit(child);
+}
+
+
 static int exec_pipeline(struct ast_pipeline *p)
 {
         if(!p || p->count == 0)
@@ -141,39 +164,7 @@ static int exec_pipeline(struct ast_pipeline *p)
         }
 
         if (pid == 0)
-        {
-            if (prev_fd != -1)
-            {
-                dup2(prev_fd, STDIN_FILENO);
-                close(prev_fd);
-            }
-            if( i + 1 < p->count)
-            {
-                    dup2(pipefd[1], STDOUT_FILENO);
-                    close(pipefd[1]);
-                    close(pipefd[0]);
-            }
-            if(prev_fd != -1)
-            {
-                    close(prev_fd);
-            }
-
-            /*if (pipefd[1] != -1)
-            {
-                dup2(pipefd[1], STDOUT_FILENO);
-                close(pipefd[1]);
-            }
-
-            if (pipefd[0] != -1)
-                close(pipefd[0]);
-             */
-            /*struct ast_cmd *cmd = (struct ast_cmd *)p->cmds[i];
-            execvp(cmd->words[0], cmd->words);
-            perror(cmd->words[0]);
-            _exit(127);*/
-            int child = exec_ast(p->cmds[i]);
-            exit(child);
-        }
+		exec_child(p,i,prev_fd, pipefd);
 
         pids[i] = pid;
 
@@ -198,6 +189,7 @@ static int exec_pipeline(struct ast_pipeline *p)
     free(pids);
     return status;
 }
+
 static int exec_negation(struct ast_negation *n)
 {
     int status = exec_ast(n->child);
@@ -405,6 +397,126 @@ static int redir_dup_out(struct ast_redirection *redir, int *new_stdout,int *new
     return stat;
 }*/
 
+static int exec_list(struct ast *ast)
+{
+	 struct ast_list *list = (struct ast_list *)ast;
+            int status = 0;
+
+            for (size_t i = 0; i < list->count; i++)
+                status = exec_ast(list->commands[i]);
+
+            return status;
+}
+
+static int exec_if(struct ast *ast)
+{
+	struct ast_if *ifn = (struct ast_if *)ast;
+            int cond = exec_ast(ifn->condition);
+
+            if (cond == 0)
+                return exec_ast(ifn->then_body);
+            else if (ifn->else_body)
+                return exec_ast(ifn->else_body);
+
+            return cond;
+}
+
+static int exec_while(struct ast *ast)
+{
+	struct ast_while *w = (struct ast_while *)ast;
+        //      struct ast_while *w = (struct ast_while *)ast;
+                int status = 0;
+                while (1)
+                {
+                        status = exec_ast(w->condition);
+                        if (status != 0)
+                                break;
+                        status = exec_ast(w->body);
+                }
+                return status;
+}
+
+static int exec_until(struct ast *ast)
+{
+	struct ast_until *u = (struct ast_until *)ast;
+                int status = 0;
+                while (1)
+                {
+                        status = exec_ast(u->condition);
+                        if (status == 0)
+                                break;
+                        status = exec_ast(u->body);
+                }
+                return status;
+}
+
+static int exec_for(struct ast *ast)
+{
+	struct ast_for *f = (struct ast_for *)ast;
+            int status = 0;
+           if (!f->words)
+                   return 0;
+           for (size_t i = 0; f->words[i] != NULL; i++)
+           {
+                //add_var(/* you'll need to pass parser here or restructure,
+                //f->variable, f->words[i]);
+                status = exec_ast(f->body);
+	   }
+	   return status;
+}
+
+static int exec_and(struct ast *ast)
+{
+	struct ast_and_or *and = (struct ast_and_or *)ast;
+            int status = exec_ast(and->left);
+
+            if (status == 0)
+                return exec_ast(and->right);
+            return status;
+}
+
+static int exec_or(struct ast *ast)
+{
+	struct ast_and_or *or = (struct ast_and_or *)ast;
+            int status = exec_ast(or->left);
+
+            if (status != 0)
+                return exec_ast(or->right);
+            return status;
+}
+
+static int exec_redirection(struct ast *ast)
+{
+	struct ast_redirection *r = (struct ast_redirection *) ast;
+                int fd = -1;
+                int tar_fd = (r->type == AST_REDIR_IN) ? 0 : 1;
+                int sav_fd = dup(tar_fd);
+                if (r->type == AST_REDIR_IN)
+                        fd = open(r->file, O_RDONLY);
+                else if (r->type == AST_REDIR_OUT)
+                        fd = open(r->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                else if (r->type == AST_REDIR_APP)
+                        fd = open(r->file, O_WRONLY | O_CREAT | O_APPEND, 0644);
+                if (fd < 0)
+                {
+                        if (sav_fd != -1)
+                                close(sav_fd);
+                        return 1;
+                }
+                dup2(fd, tar_fd);
+                close(fd);
+                int status = 0;
+                if (r->left)
+                        status = exec_ast(r->left);
+                if (sav_fd != -1)
+                {
+                        dup2(sav_fd, tar_fd);
+                        close(sav_fd);
+                }
+                return status;
+}
+
+
 int exec_ast(struct ast *ast)
 {
     if (!ast)
@@ -420,18 +532,19 @@ int exec_ast(struct ast *ast)
 
         case AST_LIST:
         {
-            struct ast_list *list = (struct ast_list *)ast;
+            /*struct ast_list *list = (struct ast_list *)ast;
             int status = 0;
 
             for (size_t i = 0; i < list->count; i++)
                 status = exec_ast(list->commands[i]);
 
-            return status;
+            return status;*/
+		return exec_list(ast);
         }
 
         case AST_IF:
         {
-            struct ast_if *ifn = (struct ast_if *)ast;
+            /*struct ast_if *ifn = (struct ast_if *)ast;
             int cond = exec_ast(ifn->condition);
 
             if (cond == 0)
@@ -439,10 +552,12 @@ int exec_ast(struct ast *ast)
             else if (ifn->else_body)
                 return exec_ast(ifn->else_body);
 
-            return cond;
+            return cond;*/
+		return exec_if(ast);
         }
 	case AST_WHILE:
         {
+		/*
                // printf("DEBUG: Executing WHILE\n");
                 struct ast_while *w = (struct ast_while *)ast;
 	//	struct ast_while *w = (struct ast_while *)ast;
@@ -454,15 +569,17 @@ int exec_ast(struct ast *ast)
 				break;
 			status = exec_ast(w->body);
 		}
-		return status;
+		return status;*/
                 //return exec_while(w);
+		return exec_while(ast);
+
         }
         case AST_UNTIL:
         {
                 //printf("DEBUG: Executing UNTIL\n");
                 //struct ast_until *u = (struct ast_until *)ast;
                 //return exec_until(u);
-		struct ast_until *u = (struct ast_until *)ast;
+		/*struct ast_until *u = (struct ast_until *)ast;
 		int status = 0;
 		while (1)
 		{
@@ -471,23 +588,25 @@ int exec_ast(struct ast *ast)
 				break;
 			status = exec_ast(u->body);
 		}
-		return status;
+		return status;*/
+		return exec_until(ast);
         }
         case AST_FOR:
         {
                //struct ast_for *f = (struct ast_for *)ast;
             //return exec_for(f);
-	    struct ast_for *f = (struct ast_for *)ast;
+	    /*struct ast_for *f = (struct ast_for *)ast;
  	    int status = 0;
     	   if (!f->words)
 		   return 0;
            for (size_t i = 0; f->words[i] != NULL; i++)
     	   {
-        	//add_var(/* you'll need to pass parser here or restructure,
+        	//add_var( you'll need to pass parser here or restructure,
                 //f->variable, f->words[i]);
         	status = exec_ast(f->body);
     	   }
-	   return status;
+	   return status;*/
+		return exec_for(ast);
         }
         case AST_PIPELINE:
             return exec_pipeline((struct ast_pipeline *)ast);
@@ -498,26 +617,28 @@ int exec_ast(struct ast *ast)
         }
         case AST_AND:
         {
-            struct ast_and_or *and = (struct ast_and_or *)ast;
+            /*struct ast_and_or *and = (struct ast_and_or *)ast;
             int status = exec_ast(and->left);
 
             if (status == 0)
                 return exec_ast(and->right);
-            return status;
+            return status;*/
+		return exec_and(ast);
         }
 
         case AST_OR:
         {
-            struct ast_and_or *or = (struct ast_and_or *)ast;
+            /*struct ast_and_or *or = (struct ast_and_or *)ast;
             int status = exec_ast(or->left);
 
             if (status != 0)
                 return exec_ast(or->right);
-            return status;
+            return status;*/
+		return exec_or(ast);
         }
         case AST_REDIRECTION:
         {
-		struct ast_redirection *r = (struct ast_redirection *) ast;
+		/*struct ast_redirection *r = (struct ast_redirection *) ast;
 		int fd = -1;
 		int tar_fd = (r->type == AST_REDIR_IN) ? 0 : 1;
 		int sav_fd = dup(tar_fd);
@@ -543,8 +664,8 @@ int exec_ast(struct ast *ast)
 			dup2(sav_fd, tar_fd);
 			close(sav_fd);
 		}
-		return status;
-
+		return status;*/
+		return exec_redirection(ast);
             /*int status = exec_redirection((struct ast_redirection *)ast);
             return status;*/
         }

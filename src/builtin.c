@@ -51,6 +51,34 @@ static int string_to_int(const char *str)
     return result * signe;
 }
 
+static void echo_print(const char *s, int f)
+{
+	for (int i = 0; s[i]; )
+        {
+            if (f && s[i] == '\\' && s[i + 1])
+            {
+                i++;
+                if (s[i] == 'n')
+                    putchar('\n');
+                else if (s[i] == 't')
+                    putchar('\t');
+                else if (s[i] == '\\')
+                    putchar('\\');
+                else
+                {
+                    putchar('\\');
+                    putchar(s[i]);
+                }
+                i++;
+            }
+            else
+            {
+                putchar(s[i]);
+                i++;
+            }
+        }
+}
+
 static int builtin_echo(char **argv)
 {
     int n_flag = 0;
@@ -85,9 +113,10 @@ static int builtin_echo(char **argv)
             putchar(' ');
         first = 0;
         
-        char *s = argv[idx];
-        int i = 0;
-        while (s[i])
+        //char *s = argv[idx];
+        //int i = 0;
+	echo_print(argv[idx], e_flag);
+        /*while (s[i])
         {
             if (e_flag && s[i] == '\\' && s[i + 1])
             {
@@ -110,7 +139,7 @@ static int builtin_echo(char **argv)
                 putchar(s[i]);
                 i++;
             }
-        }
+        }*/
         idx++;
     }
     
