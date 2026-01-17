@@ -42,7 +42,29 @@ static int exec_command(char **argv)
     return 1;
 }
 
-static int exec_while(struct ast_while *w)
+/*static int exec_while(struct ast_while *w)
+{
+    printf("DEBUG: Entering exec_while\n");
+    int status = 0;
+    int loop_count = 0;
+    while (1)
+    {
+        printf("DEBUG: While loop iteration %d\n", ++loop_count);
+        int cond = exec_ast(w->condition);
+        printf("DEBUG: Condition returned %d\n", cond);
+        if (cond != 0)
+        {
+            printf("DEBUG: Breaking because condition is false (%d)\n", cond);
+            break;
+        }
+        printf("DEBUG: Executing body\n");
+        status = exec_ast(w->body);
+        printf("DEBUG: Body returned %d\n", status);
+    }
+    printf("DEBUG: Exiting exec_while with status %d\n", status);
+    return status;
+}*/
+/*static int exec_while(struct ast_while *w)
 {
     int status = 0;
     while (1)
@@ -54,7 +76,8 @@ static int exec_while(struct ast_while *w)
     }
     return status;
 }
-
+*/
+/*
 static int exec_until(struct ast_until *u)
 {
     int status = 0;
@@ -78,8 +101,7 @@ static int exec_for(struct ast_for *f)
         status = exec_ast(f->body);
     }
     return status;
-}
-
+}*/
 static int exec_pipeline(struct ast_pipeline *p)
 {
         if(!p || p->count == 0)
@@ -415,20 +437,51 @@ int exec_ast(struct ast *ast)
         }
 	case AST_WHILE:
         {
-                printf("DEBUG: Executing WHILE\n");
+               // printf("DEBUG: Executing WHILE\n");
                 struct ast_while *w = (struct ast_while *)ast;
-                return exec_while(w);
+	//	struct ast_while *w = (struct ast_while *)ast;
+    		int status = 0;
+		while (1)
+		{
+        		status = exec_ast(w->condition);
+			if (status != 0)
+				break;
+			status = exec_ast(w->body);
+		}
+		return status;
+                //return exec_while(w);
         }
         case AST_UNTIL:
         {
-                printf("DEBUG: Executing UNTIL\n");
-                struct ast_until *u = (struct ast_until *)ast;
-                return exec_until(u);
+                //printf("DEBUG: Executing UNTIL\n");
+                //struct ast_until *u = (struct ast_until *)ast;
+                //return exec_until(u);
+		struct ast_until *u = (struct ast_until *)ast;
+		int status = 0;
+		while (1)
+		{
+        		status = exec_ast(u->condition);
+			if (status == 0)
+				break;
+			status = exec_ast(u->body);
+		}
+		return status;
         }
         case AST_FOR:
         {
-                struct ast_for *f = (struct ast_for *)ast;
-            return exec_for(f);
+               //struct ast_for *f = (struct ast_for *)ast;
+            //return exec_for(f);
+	    struct ast_for *f = (struct ast_for *)ast;
+ 	    int status = 0;
+    	   if (!f->words)
+		   return 0;
+           for (size_t i = 0; f->words[i] != NULL; i++)
+    	   {
+        	//add_var(/* you'll need to pass parser here or restructure */,
+                //f->variable, f->words[i]);
+        	status = exec_ast(f->body);
+    	   }
+	   return status;
         }
         case AST_PIPELINE:
             return exec_pipeline((struct ast_pipeline *)ast);

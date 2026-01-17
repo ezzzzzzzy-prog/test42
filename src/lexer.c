@@ -147,7 +147,9 @@ static struct token *build(void)
         {
             buf = append_char(buf, &s, &cap, c);
         }
-        return new_tok(TOK_WORD, my_strdup(buf));
+        struct token *tok = new_tok(TOK_WORD, my_strdup(buf));
+	free(buf);
+	return tok;
     }
     if (c == '&')
     {
