@@ -157,7 +157,7 @@ static struct token *build(void)
             return new_tok(TOK_AND, NULL);
         }
         struct token *tok = new_tok(TOK_WORD, my_strdup("&"));
-	free(buf);
+	//free(buf);
 	return tok;
     }
     int cap = 64;

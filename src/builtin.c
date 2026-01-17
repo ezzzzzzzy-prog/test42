@@ -53,100 +53,85 @@ static int string_to_int(const char *str)
 
 static int builtin_echo(char **argv)
 {
-    int afficher_newline = 1;
-    int interpret_slash = 0;
-    int i = 1;
+    int n_flag = 0;
+    int e_flag = 0;
+    int idx = 1;
     
-    while (argv[i] != NULL && argv[i][0] == '-')
+    while (argv[idx] && argv[idx][0] == '-')
     {
-        if (strcmp(argv[i], "-n") == 0)
+        if (!strcmp(argv[idx], "-n"))
         {
-            afficher_newline = 0;
-            i++;
+            n_flag = 1;
+            idx++;
         }
-        else if (strcmp(argv[i], "-e") == 0)
+        else if (!strcmp(argv[idx], "-e"))
         {
-            interpret_slash = 1;
-            i++;
+            e_flag = 1;
+            idx++;
         }
-        else if (strcmp(argv[i], "-E") == 0)
+        else if (!strcmp(argv[idx], "-E"))
         {
-            interpret_slash = 0;
-            i++;
+            e_flag = 0;
+            idx++;
         }
         else
-        {
             break;
-        }
     }
     
-    while (argv[i] != NULL)
+    int first = 1;
+    while (argv[idx])
     {
-        char *mot = argv[i];
+        if (!first)
+            putchar(' ');
+        first = 0;
         
-        if (interpret_slash)
+        char *s = argv[idx];
+        int i = 0;
+        while (s[i])
         {
-            int j = 0;
-            while (mot[j] != '\0')
+            if (e_flag && s[i] == '\\' && s[i + 1])
             {
-                if (mot[j] == '\\' && mot[j + 1] != '\0')
-                {
-                    if (mot[j + 1] == 'n')
-                    {
-                        putchar('\n');
-                        j = j + 2;
-                    }
-                    else if (mot[j + 1] == 't')
-                    {
-                        putchar('\t');
-                        j = j + 2;
-                    }
-                    else if (mot[j + 1] == '\\')
-                    {
-                        putchar('\\');
-                        j = j + 2;
-                    }
-                    else
-                    {
-                        putchar(mot[j]);
-                        j++;
-                    }
-                }
+                i++;
+                if (s[i] == 'n')
+                    putchar('\n');
+                else if (s[i] == 't')
+                    putchar('\t');
+                else if (s[i] == '\\')
+                    putchar('\\');
                 else
                 {
-                    putchar(mot[j]);
-                    j++;
+                    putchar('\\');
+                    putchar(s[i]);
                 }
+                i++;
+            }
+            else
+            {
+                putchar(s[i]);
+                i++;
             }
         }
-        else
-        {
-            printf("%s", mot);
-        }
-        
-        i++;
-        
-        if (argv[i] != NULL)
-            putchar(' ');
+        idx++;
     }
     
-    if (afficher_newline)
+    if (!n_flag)
         putchar('\n');
     
     fflush(stdout);
-    
     return 0;
 }
 
-static int builtin_true(char ** argv)
+static int builtin_true(char **argv)
 {
-    (void)argv;
+    if (argv)
+        argv = argv;
     return 0;
 }
 
-static int builtin_false(char ** argv)
+static int builtin_false(char **argv)
 {
-    (void)argv;
+    if (argv)
+        argv = argv;
     return 1;
 }
 

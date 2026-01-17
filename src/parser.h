@@ -3,7 +3,7 @@
 
 #include "ast.h"
 #include "lexer.h"
-
+#include "special.h"
 
 struct variable
 {
@@ -17,11 +17,13 @@ struct parser
     struct lexer *lex;
     struct token *curr_tok;
     struct variable *var;
+    struct special *spe;
 };
 struct parser *new_parse(void);
 
 struct ast *parser_input(struct parser *parser);
 struct ast *parse_rule_if(struct parser *parser);
 void parser_free(struct parser *parser);
+void add_var(struct parser *parser, char *name, char *value);
 
 #endif /* PARSER_H */
