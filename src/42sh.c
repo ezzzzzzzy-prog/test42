@@ -21,9 +21,10 @@ int main(int argc, char **argv)
     struct ast *ast = parser_input(parser);
     if (!ast)
     {
+	    int status = 0;
         parser_free(parser);
         io_backend_close();
-        return 2;
+        return status;
     }
 
     int status = exec_ast(ast);

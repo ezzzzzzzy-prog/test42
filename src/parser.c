@@ -124,7 +124,56 @@ static int parse_assignment(struct parser *parser)
         parser_consume(parser);
         return 1;
 }
+static bool is_redirection(enum type t)
+{
+    if(t == TOK_REDIR_OUT)
+       return true;
+    if(t == TOK_REDIR_APP) 
+        return true;
+    if(t == TOK_REDIR_DUP_OUT)
+       return true;
+    if(t == TOK_REDIR_DUP_IN)
+       return true;
+    if(t == TOK_REDIR_FORC_OUT)
+       return true;
+    if(t == TOK_REDIR_IN)
+       return true;
+    if(t == TOK_REDIR_RW)
+        return true;
+    return false;
+}
 
+struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
+{
+	if (!parser || !parser->curr_tok || !is_redirection(parser->curr_tok->type))
+	{
+		return NULL;
+	}
+	enum type curr_type = parser->curr_tok->type;
+	enum redir_type curr_redir_type;
+	if (curr_type == TOK_REDIR_OUT)
+		curr_redir_type = AST_REDIR_OUT;
+	else if (curr_type == TOK_REDIR_IN)
+		curr_redir_type = AST_REDIR_IN;
+	else if (curr_type == TOK_REDIR_APP)
+		curr_redir_type = AST_REDIR_APP;
+	else if (curr_type == TOK_REDIR_DUP_OUT)
+		curr_redir_type = AST_REDIR_DUP_OUT;
+	else if (curr_type == TOK_REDIR_DUP_IN)
+		curr_redir_type = AST_REDIR_DUP_IN;
+	else if (curr_type == TOK_REDIR_FORC_OUT)
+		curr_redir_type = AST_REDIR_FORC_OUT;
+	else if (curr_type == TOK_REDIR_RW)
+		curr_redir_type = AST_REDIR_RW;
+	else 
+		return NULL;
+	parser_consume(parser);
+	if (!parser->curr_tok || parser->curr_tok->type != TOK_WORD)
+		return NULL;
+	char *f = strdup(parser->curr_tok->val);
+	parser_consume(parser);
+	return create_redir(curr_redir_type, left_cmd, f);
+}
 
 struct ast *parse_simple_command(struct parser *parser)
 {
@@ -138,13 +187,34 @@ struct ast *parse_simple_command(struct parser *parser)
     {
             return NULL;
     }
+    struct ast *res = NULL;
     size_t cap = 4;
     size_t count = 0;
     char **words = malloc(sizeof(char *) * cap);
     if (!words)
         return NULL;
-    while (parser->curr_tok && parser->curr_tok->type == TOK_WORD)
+    while (parser->curr_tok && (parser->curr_tok->type == TOK_WORD || is_redirection(parser->curr_tok->type)/*parser->curr_tok->type == TOK_REDIR_IN ||parser->curr_tok->type == TOK_REDIR_OUT ||parser->curr_tok->type == TOK_REDIR_APP*/))
     {
+	    if (is_redirection(parser->curr_tok->type))
+	    {
+		    struct ast *new_res = parse_redir(parser, NULL);
+		    if (!new_res)
+			    goto error;
+		    //res = new_res;
+		    if (res == NULL)
+		    {
+			    res = new_res;
+		    }
+		    else
+		    {
+			    struct ast_redirection *news = (struct ast_redirection *)res;
+			    while (news->left != NULL)
+				    news = (struct ast_redirection *)news->left;
+			    news->left = new_res;
+		    }
+	    }
+	    else 
+	    {
         if (count + 1 >= cap)
         {
             cap *= 2;
@@ -159,16 +229,32 @@ struct ast *parse_simple_command(struct parser *parser)
 
         count++;
         parser_consume(parser);
+	    }
     }
-    if (count >= cap)
+    if (count == 0 && res == NULL)
+    {
+	    free(words);
+	    return NULL;
+    }
+    /*if (count >= cap)
     {
         char **tmp = realloc(words, sizeof(char *) * (count + 1));
         if (!tmp)
             goto error;
         words = tmp;
-    }
+    }*/
     words[count] = NULL;
-    return create_cmd(words);
+    struct ast *cmd =  create_cmd(words);
+    if (res != NULL)
+    {
+	    struct ast_redirection *tmp = (struct ast_redirection *)res;
+	    while(tmp->left != NULL)
+		    tmp = (struct ast_redirection *)tmp->left;
+	    tmp->left = cmd;
+	    return res;
+    }
+    return cmd;
+    //return create_cmd(words);
 
 error:
     for (size_t i = 0; i < count; i++)
@@ -484,7 +570,7 @@ struct ast *parse_rule_if(struct parser *parser)
     return create_if(condition, then_body, else_body);
 }
 
-static bool is_redirection(enum type t)
+/*static bool is_redirection(enum type t)
 {
     if(t == TOK_REDIR_OUT)
        return true;
@@ -501,9 +587,9 @@ static bool is_redirection(enum type t)
     if(t == TOK_REDIR_RW)
         return true;
     return false;
-}
+}*/
 
-struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
+/*struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
 {
 	if (!parser || !parser->curr_tok || !is_redirection(parser->curr_tok->type))
 	{
@@ -533,14 +619,15 @@ struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
 	char *f = strdup(parser->curr_tok->val);
 	parser_consume(parser);
 	return create_redir(curr_redir_type, left_cmd, f);
-}
+}*/
 
 struct ast *parser_input(struct parser *parser)
 {
     if (!parser)
         return NULL;
     if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF)
-        return create_list(NULL, 0);
+	    return NULL;
+        //return create_list(NULL, 0);
     return parse_compound_list(parser);
 }
 

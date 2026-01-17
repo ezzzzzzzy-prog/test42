@@ -223,7 +223,10 @@ static int exec_negation(struct ast_negation *n)
 	}
     close(new_stdout);
 */
-static int redir_out(struct ast_redirection *redir, int *new_stdout)
+
+//lui aussi en suspens pour linstant
+
+/*static int redir_out(struct ast_redirection *redir, int *new_stdout)
 {
     *new_stdout = dup(STDOUT_FILENO);
     if (*new_stdout < 0)
@@ -234,15 +237,15 @@ static int redir_out(struct ast_redirection *redir, int *new_stdout)
     if(dup2(fd, STDOUT_FILENO) == -1)
     {
         errx(1, "failed to call dup2");
-    }
+    }*/
 /*    if (dup2(new_stdout, STDOUT_FILENO) == -1)
     {
         errx(1, "failed to call dup2");
 	}*/
-    close(fd);
+   /* close(fd);
     return 0;
-}
-static int redir_in(struct ast_redirection *redir, int *new_stdin)
+}*/
+/*static int redir_in(struct ast_redirection *redir, int *new_stdin)
 {
     *new_stdin = dup(STDIN_FILENO);
     if (*new_stdin < 0)
@@ -336,7 +339,7 @@ static int redir_dup_out(struct ast_redirection *redir, int *new_stdout,int *new
     }
     close(fd);
     return 0;
-}
+}*/
 /*static int redir_dup_in(struct ast_redirection *redir, int *new_stdin)
 {
     *new_stdin = dup(STDIN_FILENO);
@@ -354,7 +357,10 @@ static int redir_dup_out(struct ast_redirection *redir, int *new_stdout,int *new
     close(fd);
     return 0;
 }*/
-static int exec_redirection(struct ast_redirection *redir)
+
+//je mets juste en commentaire pour linstant je dois juste tester le case redirection avant, si ca marche je mets le truc de case_redirection ici bas
+
+/*static int exec_redirection(struct ast_redirection *redir)
 {
 
     int new_stdin  = -1;
@@ -397,7 +403,7 @@ static int exec_redirection(struct ast_redirection *redir)
         close(new_stderr);
     }
     return stat;
-}
+}*/
 
 int exec_ast(struct ast *ast)
 {
@@ -477,7 +483,7 @@ int exec_ast(struct ast *ast)
 		   return 0;
            for (size_t i = 0; f->words[i] != NULL; i++)
     	   {
-        	//add_var(/* you'll need to pass parser here or restructure */,
+        	//add_var(/* you'll need to pass parser here or restructure,
                 //f->variable, f->words[i]);
         	status = exec_ast(f->body);
     	   }
@@ -511,8 +517,36 @@ int exec_ast(struct ast *ast)
         }
         case AST_REDIRECTION:
         {
-            int status = exec_redirection((struct ast_redirection *)ast);
-            return status;
+		struct ast_redirection *r = (struct ast_redirection *) ast;
+		int fd = -1;
+		int tar_fd = (r->type == AST_REDIR_IN) ? 0 : 1;
+		int sav_fd = dup(tar_fd);
+		if (r->type == AST_REDIR_IN)
+			fd = open(r->file, O_RDONLY);
+		else if (r->type == AST_REDIR_OUT)
+			fd = open(r->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		else if (r->type == AST_REDIR_APP)
+			fd = open(r->file, O_WRONLY | O_CREAT | O_APPEND, 0644);
+		if (fd < 0)
+		{
+			if (sav_fd != -1)
+				close(sav_fd);
+			return 1;
+		}
+		dup2(fd, tar_fd);
+		close(fd);
+		int status = 0;
+		if (r->left)
+			status = exec_ast(r->left);
+		if (sav_fd != -1)
+		{
+			dup2(sav_fd, tar_fd);
+			close(sav_fd);
+		}
+		return status;
+
+            /*int status = exec_redirection((struct ast_redirection *)ast);
+            return status;*/
         }
         default:
             return 0;
