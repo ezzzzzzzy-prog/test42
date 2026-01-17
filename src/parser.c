@@ -39,6 +39,7 @@ struct parser *new_parse(void)
     p->lex = new_lex();
     p->curr_tok = pop(p->lex);
     p->var = NULL;
+    p->spe=NULL;
     return p;
 }
 
@@ -62,6 +63,34 @@ void parser_free(struct parser *parser)
     lexer_free(parser->lex);
      free_variable(parser->var);
     free(parser);
+}
+
+void add_var(struct parser *parser, char *name, char *value)
+{
+        if(!parser || !name)
+        {
+                return;
+        }
+        struct variable *v = parser->var;
+        while(v)
+        {
+                if(strcmp(v->nom,name) == 0)
+                {
+                        free(v->value);
+                        v->value = strdup(value);
+                        return;
+                }
+                v = v->next;
+        }
+        struct variable *var = malloc(sizeof(*var));
+        if(!var)
+        {
+                return;
+        }
+        var->nom = strdup(name);
+        var->value = strdup(value);
+        var->next = parser->var;
+        parser->var = var;
 }
 
 static int parse_assignment(struct parser *parser)
@@ -123,7 +152,7 @@ struct ast *parse_simple_command(struct parser *parser)
                 goto error;
             words = tmp;
         }
-        words[count] = expand(parser,parser->curr_tok->val);
+        words[count] = expand(parser, parser->spe, parser->curr_tok->val);
         if (!words[count])
             goto error;
 

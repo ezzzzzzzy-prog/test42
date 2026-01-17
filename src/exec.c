@@ -77,7 +77,9 @@ static int exec_for(struct ast_for *f)
     {
         status = exec_ast(f->body);
     }
-    return sta
+    return status;
+}
+
 static int exec_pipeline(struct ast_pipeline *p)
 {
         if(!p || p->count == 0)
