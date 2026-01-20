@@ -123,7 +123,6 @@ static struct token *redir_out_tok(void)
     }
     return new_tok(TOK_REDIR_OUT, NULL);
 }
-
 static struct token *redir_in_tok(void)
 {
     if (io_backend_peek() == '&')
@@ -182,8 +181,7 @@ static struct token *comment_tok(int c)
     int c;
     int cap = 64;
     int s = 0;
-    char *buf = malloc(cap);
-    // int i = 0;
+    char *buf = malloc(cap); 
     while ((c = io_backend_next()) != EOF && c != '"')
     {
         buf = append_char(buf, &s, &cap, c);
@@ -295,86 +293,57 @@ static struct token *read_tok(int c)
     }
     return word_tok(buf);
 }
+static struct token *redir_nb(int c)
+{
+     int n = c;
+        char buf[32];
+        int i = 0;
 
+        buf[i++] = n;
+        while (isdigit(io_backend_peek()))
+        {
+            buf[i++] = io_backend_next();
+        }
+        buf[i] = '\0';
+
+        if (io_backend_peek() == '<' || io_backend_peek() == '>')
+        {
+            return new_tok(TOK_REDIR_NB, my_strdup(buf));
+        }
+
+        return word_tok(my_strdup(buf));
+}
 static struct token *build(void)
 {
-    /*int c = io_backend_next();
-
-    while (c == ' ' || c == '\t')
-        c = io_backend_next();*/
     int c = skip();
     struct token *tok;
 
-    /*if (c == EOF)
-        return new_tok(TOK_EOF, NULL);
-    if (c == '!')
-        return new_tok(TOK_NOT, NULL);
-    if (c == '\n')
-        return new_tok(TOK_NEWLINE, NULL);
-
-    if (c == ';')
-        return new_tok(TOK_SEMI, NULL);*/
     if ((tok = simple_tok(c)))
         return tok;
 
+    if (isdigit(c))
+        return redir_nb(c);
+
     if (c == '|')
-    {
-        /*if (io_backend_peek() == '|')
-        {
-            io_backend_next();
-            return new_tok(TOK_OR, NULL);
-        }
-        return new_tok(TOK_IN, NULL);*/
         return pipe_tok();
-    }
     /*if (c == '"')
     {
         return double_quot_tok();
     }*/
     if (c == '>')
-    {
-        /*if (io_backend_peek() == '>')
-        {
-            io_backend_next();
-            return new_tok(TOK_REDIR_APP, NULL);
-        }
-        if (io_backend_peek() == '&')
-        {
-            io_backend_next();
-            return new_tok(TOK_REDIR_DUP_OUT, NULL);
-        }
-        if (io_backend_peek() == '|')
-        {
-            io_backend_next();
-            return new_tok(TOK_REDIR_FORC_OUT, NULL);
-        }
-        return new_tok(TOK_REDIR_OUT, NULL);*/
         return redir_out_tok();
-    }
 
     if (c == '<')
-    {
-        /*if (io_backend_peek() == '&')
-        {
-            io_backend_next();
-            return new_tok(TOK_REDIR_DUP_IN, NULL);
-        }
-        if (io_backend_peek() == '>')
-        {
-            io_backend_next();
-            return new_tok(TOK_REDIR_RW, NULL);
-        }
-        return new_tok(TOK_REDIR_IN, NULL);*/
         return redir_in_tok();
-    }
+
+    //if (c == '"')
+      //  return double_quot_tok();
+
+    //if (c == '\'')
+      //  return quot_tok();
 
     if (c == '#')
-    {
-        /*while (c != EOF && c != '\n')
-            c = io_backend_next();
-        return new_tok(c == '\n' ? TOK_NEWLINE : TOK_EOF, NULL);*/
         return comment_tok(c);
-    }
     //if (c == '\'')
     //{
         /*int cap = 64;
@@ -390,6 +359,7 @@ static struct token *build(void)
     return tok;*/
       //  return quot_tok();
     //}
+
     if (c == '&')
     {
         if (io_backend_peek() == '&')
@@ -397,85 +367,12 @@ static struct token *build(void)
             io_backend_next();
             return new_tok(TOK_AND, NULL);
         }
-        struct token *tok = new_tok(TOK_WORD, my_strdup("&"));
-        // free(buf);
-        return tok;
-    }
-    /*int cap = 64;
-    int s = 0;
-    char *buf = malloc(cap);
-    while (c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<'
-           && c != '>' && c != '!')
-    {
-        buf = append_char(buf, &s, &cap, c);
-        c = io_backend_peek();
-        if (isspace(c) || c == ';' || c == '|' || c == '<' || c == '>'
-            || c == '!')
-            break;
-        c = io_backend_next();
+        return new_tok(TOK_WORD, my_strdup("&"));
     }
 
-    if (strcmp(buf, "if") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_IF, NULL);
-    }
-    if (strcmp(buf, "then") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_THEN, NULL);
-    }
-    if (strcmp(buf, "elif") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_ELIF, NULL);
-    }
-    if (strcmp(buf, "else") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_ELSE, NULL);
-    }
-    if (strcmp(buf, "fi") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_FI, NULL);
-    }
-    if (strcmp(buf, "while") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_WHILE, NULL);
-    }
-    if (strcmp(buf, "until") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_UNTIL, NULL);
-    }
-    if (strcmp(buf, "for") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_FOR, NULL);
-    }
-    if (strcmp(buf, "do") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_DO, NULL);
-    }
-    if (strcmp(buf, "done") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_DONE, NULL);
-    }
-    if (strcmp(buf, "in") == 0)
-    {
-        free(buf);
-        return new_tok(TOK_IN, NULL);
-    }
-
-    struct token *tok = new_tok(TOK_WORD, my_strdup(buf));
-    free(buf);
-    return tok;*/
     return read_tok(c);
 }
+
 
 struct token *peek(struct lexer *lex)
 {

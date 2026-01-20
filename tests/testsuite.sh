@@ -16,22 +16,40 @@ for dir in "$TEST_ROOT"/*; do
     sh_file=$(ls "$dir"/*.sh 2>/dev/null)
     out_file=$(ls "$dir"/*.out 2>/dev/null)
     sta_file=$(ls "$dir"/*.sta 2>/dev/null)
-
+    err_file=$(ls "$dir"/*.err 2>/dev/null)
+    in_file=$(ls "$dir"/*.in 2>/dev/null)
     if [ ! -f "$sh_file" ] || [ ! -f "$out_file" ] || [ ! -f "$sta_file" ]; then
+        echo "[SKIP] MISSING TEST FILES " >&2
+        continue
+    fi
+    if [ ! -f "$sta_file" ] && [ ! -f "$err_file" ] && [ ! -f "$in_file" ]; then
+        echo "[SKIP] MISSING CODE FILES" >&2
         continue
     fi
 
     TOTAL=$((TOTAL + 1))
     out_tmp=$(mktemp)
+    err_tmp=$(mktemp)
 
-    timeout 2 "$BIN_PATH" "$sh_file" >"$out_tmp" 2>/dev/null
+    if [ -f "$in_file" ]; then
+        timeout 2 "$BIN_PATH" "$sh_file" <"$in_file" >"$out_tmp" 2>"$err_tmp"
+    else
+        timeout 2 "$BIN_PATH" "$sh_file" >"$out_tmp" 2>"$err_tmp"
+    fi
     rc=$?
     exp_rc=$(cat "$sta_file")
 
     diff -u "$out_file" "$out_tmp" >/dev/null
     diff_rc=$?
+    err_diff_rc=0
+    if [ -f "$err_file" ]; then
+        diff -u "$err_file" "$err_tmp" >/dev/null
+        err_diff_rc=$?
+    else
+        [ -s "$err_tmp" ] && err_diff_rc=1
+    fi
 
-    if [ "$diff_rc" -eq 0 ] && [ "$rc" = "$exp_rc" ]; then
+    if [ "$diff_rc" -eq 0 ] && [ "$err_diff_rc" -eq 0 ] && [ "$rc" = "$exp_rc" ]; then
         PASS=$((PASS + 1))
     else
         echo "[FAIL] $dir"
@@ -44,9 +62,16 @@ for dir in "$TEST_ROOT"/*; do
             echo "DIFFERENT OUTPUTS:"
             diff -u "$out_file" "$out_tmp"
         fi
+
+
+        if [ "$err_diff_rc" -ne 0 ]; then
+            echo "DIFFERENT ERROR OUTPUTS:"
+            diff -u "$err_file" "$err_tmp"
+        fi
     fi
 
     rm -f "$out_tmp"
+    rm -f "$err_tmp"
 done
 
 if [ "$TOTAL" -eq 0 ]; then

@@ -27,7 +27,8 @@ enum type
     TOK_REDIR_DUP_IN,
     TOK_REDIR_FORC_OUT,
     TOK_REDIR_IN,
-    TOK_REDIR_RW
+    TOK_REDIR_RW,
+    TOK_REDIR_NB
 };
 
 struct token

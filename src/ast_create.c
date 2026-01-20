@@ -122,7 +122,7 @@ struct ast *create_or(struct ast *left, struct ast *right)
     or->right = right;
     return (struct ast *) or ;
 }
-struct ast *create_redir(enum redir_type type, struct ast *left, char *file)
+struct ast *create_redir(enum redir_type type, struct ast *left, char *file, int file_desc)
 {
     struct ast_redirection *redir = malloc(sizeof(*redir));
     if (!redir)
@@ -132,6 +132,7 @@ struct ast *create_redir(enum redir_type type, struct ast *left, char *file)
     redir->type = type;
     redir->left = left;
     redir->file = file;
+    redir->file_desc = file_desc;
     return (struct ast *)redir;
 }
 

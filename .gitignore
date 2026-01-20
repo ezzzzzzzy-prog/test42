@@ -28,3 +28,9 @@
 /src/.deps/*
 .libs/
 *.lai
+*.backup
+test_exp
+*.o
+out
+actual.txt
+expected.txt
