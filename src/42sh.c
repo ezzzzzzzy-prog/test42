@@ -5,6 +5,8 @@
 #include "parser.h"
 #include "exec.h"
 #include "ast.h"
+#include <unistd.h>
+#include <sys/wait.h>
 
 int main(int argc, char **argv)
 {
@@ -28,10 +30,20 @@ int main(int argc, char **argv)
     }
 
     int status = exec_ast(ast);
+/* pid_t pid = fork();
+    if (pid == 0)
+        _exit(exec_ast(ast));
 
+    int status;
+    waitpid(pid, &status, 0);
+    */
     ast_free(ast);
     parser_free(parser);
     io_backend_close();
-
+    //added
+    //if (WIFEXITED(status))
+      //  return WEXITSTATUS(status);
+    
+    //return 1;
     return status;
 }
