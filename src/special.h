@@ -22,7 +22,7 @@ struct special
     char *shell_opts;     // $- (ex: "himBH")
 };
 
-struct special *create_special(char **args, int argc_count, char *script_name);
+struct special *create_special(char **args, int argc_count);
 void free_special(struct special *spe);
 
 #endif /* SPECIAL_H */
