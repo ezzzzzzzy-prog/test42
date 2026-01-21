@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "expansion.h"
+
+extern struct parser *g_parser;
 
 int is_builtin(const char *cmd)
 {
@@ -79,7 +82,7 @@ static void echo_print(const char *s, int f)
         }
 }
 
-static int builtin_echo(char **argv)
+static int builtin_echo(char **argv, struct parser *parser)
 {
     int n_flag = 0;
     int e_flag = 0;
@@ -115,7 +118,7 @@ static int builtin_echo(char **argv)
         
         //char *s = argv[idx];
         //int i = 0;
-	echo_print(argv[idx], e_flag);
+	//echo_print(argv[idx], e_flag);
         /*while (s[i])
         {
             if (e_flag && s[i] == '\\' && s[i + 1])
@@ -139,6 +142,34 @@ static int builtin_echo(char **argv)
                 putchar(s[i]);
                 i++;
             }
+        }*/
+	 char *expanded = expand(parser, parser->spe, argv[idx]);
+        if (expanded)
+        {
+            echo_print(expanded, e_flag);
+            free(expanded);
+        }
+        else
+        {
+            echo_print(argv[idx], e_flag);
+        }
+/*	if (argv[idx][0] == '$')
+        {
+            const char *varname = argv[idx] + 1;
+            const char *value = find_var(varname, parser->var);
+            if (value && *value)
+            {
+                printf("%s", value);
+            }
+            else
+            {
+                // Variable non trouvée, afficher le mot original
+                echo_print(argv[idx], e_flag);
+            }
+        }
+        else
+        {
+            echo_print(argv[idx], e_flag);
         }*/
         idx++;
     }
@@ -201,7 +232,7 @@ static int builtin_cd(char **argv)
     return 0;
 }
 
-int execute_builtin(char **argv)
+int execute_builtin(char **argv, struct parser *parser)
 {
     if (argv == NULL || argv[0] == NULL)
         return -1;
@@ -209,7 +240,7 @@ int execute_builtin(char **argv)
     char *cmd = argv[0];
     
     if (strcmp(cmd, "echo") == 0)
-        return builtin_echo(argv);
+        return builtin_echo(argv, parser);
     
     if (strcmp(cmd, "true") == 0)
         return builtin_true(argv);

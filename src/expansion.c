@@ -121,7 +121,12 @@ static char *get_name_brace(const char *word, size_t *i)
 static const char *find_var(const char *name, struct variable *var)
 {
     struct variable *actuel = var;
+    while (actuel)
+    {
+        actuel = actuel->next;
+    }
     
+    actuel = var; 
     while (actuel)
     {
         if (actuel->nom && strcmp(actuel->nom, name) == 0)
@@ -132,11 +137,13 @@ static const char *find_var(const char *name, struct variable *var)
         }
         actuel = actuel->next;
     }
-    
     char *env = getenv(name);
     if (env)
+    {
+	
         return env;
-    
+    }
+
     return "";
 }
 
@@ -719,7 +726,6 @@ char *expand(struct parser *parser, struct special *spe, const char *word)
         free(ctx.res);
         return NULL;
     }
-    
     ctx.res[ctx.pos] = '\0';
     return ctx.res;
 }

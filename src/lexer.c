@@ -101,7 +101,7 @@ static struct token *pipe_tok(void)
         io_backend_next();
         return new_tok(TOK_OR, NULL);
     }
-    return new_tok(TOK_IN, NULL);
+    return new_tok(TOK_PIPE, NULL);
 }
 
 static struct token *redir_out_tok(void)

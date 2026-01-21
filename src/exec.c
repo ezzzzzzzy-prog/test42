@@ -1,14 +1,18 @@
+#define _POSIX_C_SOURCE 200809L
 #include "exec.h"
 #include "ast.h"
 #include "builtin.h"
-
+#include "parser.h"
+#include "expansion.h"
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <err.h> 
+#include <string.h>
 
+struct parser *g_parser = NULL;
 
 static int exec_command(char **argv)
 {
@@ -16,7 +20,30 @@ static int exec_command(char **argv)
         return 0;
 
     if (is_builtin(argv[0]))
-        return execute_builtin(argv);
+    {
+        return execute_builtin(argv,g_parser);
+    }
+    char **expanded_argv = malloc(sizeof(char *) * 64);
+    if (!expanded_argv)
+        return 1;
+    
+    int count = 0;
+    
+    for (int i = 0; argv[i] != NULL && i < 63; i++)
+    {
+        char *expanded = expand(g_parser, g_parser->spe, argv[i]);
+        if (expanded)
+        {
+            expanded_argv[count++] = expanded;
+        }
+        else
+        {
+            expanded_argv[count++] = strdup(argv[i]);
+        }
+    }
+    expanded_argv[count] = NULL;
+    
+    //pid_t pid = fork();
 
     pid_t pid = fork();
 
@@ -35,7 +62,9 @@ static int exec_command(char **argv)
 
     int status;
     waitpid(pid, &status, 0);
-
+     for (int i = 0; i < count; i++)
+        free(expanded_argv[i]);
+    free(expanded_argv);
     if (WIFEXITED(status))
         return WEXITSTATUS(status);
 
@@ -162,22 +191,44 @@ static int exec_if(struct ast *ast)
             return cond;
 }
 
-static int exec_while(struct ast *ast)
+/*static int exec_while(struct ast *ast)
 {
+	 printf("DEBUG: exec_while called\n");
 	struct ast_while *w = (struct ast_while *)ast;
         //      struct ast_while *w = (struct ast_while *)ast;
                 int status = 0;
                 while (1)
                 {
+			printf("DEBUG: while condition returned %d\n", status);
                         status = exec_ast(w->condition);
                         if (status != 0)
                                 break;
                         status = exec_ast(w->body);
+			printf("DEBUG: while body returned %d\n", status);
                 }
                 return status;
+}*/
+static int exec_while(struct ast *ast)
+{
+	  if (!ast) return 0;
+    struct ast_while *w = (struct ast_while *)ast;
+      if (!w || !w->condition || !w->body)
+        return 0;
+
+    int cond_status = 0;
+    int body_status = 0;
+
+    while (1)
+    {
+        cond_status = exec_ast(w->condition);  // Évalue la condition
+        if (cond_status != 0)                  // Si condition échoue, break
+            break;
+        body_status = exec_ast(w->body);       // Évalue le corps
+    }
+    return body_status;  // Retourner le dernier code de retour du corps
 }
 
-static int exec_until(struct ast *ast)
+/*static int exec_until(struct ast *ast)
 {
 	struct ast_until *u = (struct ast_until *)ast;
                 int status = 0;
@@ -189,9 +240,25 @@ static int exec_until(struct ast *ast)
                         status = exec_ast(u->body);
                 }
                 return status;
+}*/
+static int exec_until(struct ast *ast)
+{
+    struct ast_until *u = (struct ast_until *)ast;
+    int cond_status = 0;
+    int body_status = 0;
+    
+    while (1)
+    {
+        cond_status = exec_ast(u->condition);
+        if (cond_status == 0)  // until s'arrête quand condition réussit
+            break;
+        body_status = exec_ast(u->body);
+    }
+    return body_status;
 }
 
-static int exec_for(struct ast *ast)
+
+/*static int exec_for(struct ast *ast)
 {
 	struct ast_for *f = (struct ast_for *)ast;
             int status = 0;
@@ -199,12 +266,63 @@ static int exec_for(struct ast *ast)
                    return 0;
            for (size_t i = 0; f->words[i] != NULL; i++)
            {
-                //add_var(/* you'll need to pass parser here or restructure,
-                //f->variable, f->words[i]);
+                if (g_parser)
+                    add_var(g_parser, f->var, f->words[i]);
                 status = exec_ast(f->body);
 	   }
 	   return status;
+}*/
+
+
+
+static int exec_for(struct ast *ast)
+{
+    struct ast_for *f = (struct ast_for *)ast;
+    int status = 0;
+    if (!f->words)
+    {
+        status = exec_ast(f->body);
+        return status;
+    }
+    for (size_t i = 0; f->words[i] != NULL; i++)
+    {
+        if (g_parser)
+	{
+            add_var(g_parser, f->var, f->words[i]);
+	   /* struct variable *v = g_parser->var;
+            while (v)
+            {
+                printf("  - %s=%s\n", v->nom, v->value);
+                v = v->next;
+            }*/
+	}
+
+        status = exec_ast(f->body);
+    }
+
+    return status;
 }
+/*static int exec_for(struct ast *ast, struct parser *parser)
+{
+    struct ast_for *f = (struct ast_for *)ast;
+    int status = 0;
+    
+    if (!f->words)
+        return 0;
+    
+    for (size_t i = 0; f->words[i] != NULL; i++)
+    {
+        // Assigner la variable pour cette itération
+	if (g_parser)
+            add_var(g_parser, f->var, f->words[i]);*/
+       /* if (parser)
+            add_var(parser, f->var, f->words[i]);
+        
+        status = exec_ast(f->body);
+    }
+    
+    return status;
+}*/
 
 static int exec_and(struct ast *ast)
 {
@@ -407,4 +525,12 @@ int exec_ast(struct ast *ast)
         default:
             return 0;
     }
+}
+
+
+
+
+void exec_set_parser(struct parser *parser)
+{
+    g_parser = parser;
 }

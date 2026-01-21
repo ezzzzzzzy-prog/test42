@@ -12,6 +12,7 @@ enum type
     TOK_FI,
     TOK_SEMI,
     TOK_NEWLINE,
+    TOK_PIPE,
     TOK_FOR,
     TOK_WHILE,
     TOK_UNTIL,
