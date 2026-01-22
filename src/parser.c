@@ -41,6 +41,9 @@ struct parser *new_parse(void)
     p->lex = new_lex();
     p->curr_tok = pop(p->lex);
     p->var = NULL;
+    p->exit = 0;
+    p->ex_code = 0;
+    p->last_code = 0;
     return p;
 }
 

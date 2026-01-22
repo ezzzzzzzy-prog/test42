@@ -376,13 +376,15 @@ static void redirect(struct ast_redirection *r)
     else
         _exit(1);
 }
-
+//pour multi redir
 static struct ast *all_redirections(struct ast *ast)
 {
     while (ast->type == AST_REDIRECTION)
     {
         struct ast_redirection *r = (struct ast_redirection *)ast;
+        //change ou ca pointe 
         redirect(r);
+        // ou le faire
         ast = r->left;
     }
     return ast;

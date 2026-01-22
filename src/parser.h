@@ -18,6 +18,9 @@ struct parser
     struct token *curr_tok;
     struct variable *var;
     struct special *spe;
+    int exit;
+    int ex_code;
+    int last_code;
 };
 struct parser *new_parse(void);
 

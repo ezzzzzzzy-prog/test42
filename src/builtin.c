@@ -195,17 +195,26 @@ static int builtin_false(char **argv)
     return 1;
 }
 
-static int builtin_exit(char **argv)
+static int builtin_exit(char **argv,struct parser *parser)
 {
     int end_code = 0;
-    
-    if (argv[1] != NULL)
+    if (argv[1] == NULL)
     {
-        end_code = string_to_int(argv[1]);
+        parser->exit = 1;
+        parser->ex_code = parser->last_code;
+        return 0;
     }
-    
-    exit(end_code);
-    return 0;
+
+    if (argv[2] != NULL)
+    {
+        fprintf(stderr, "exit too many args\n");
+        return 1;
+    }
+
+    end_code = string_to_int(argv[1]);
+    parser->exit = 1;
+    parser->ex_code = end_code;
+    return end_code;
 }
 
 static int builtin_cd(char **argv)
@@ -249,7 +258,7 @@ int execute_builtin(char **argv, struct parser *parser)
         return builtin_false(argv);
     
     if (strcmp(cmd, "exit") == 0)
-        return builtin_exit(argv);
+        return builtin_exit(argv,parser);
     
     if (strcmp(cmd, "cd") == 0)
         return builtin_cd(argv);
