@@ -42,24 +42,18 @@ static int exec_command(char **argv)
         }
     }
     expanded_argv[count] = NULL;
-    
-    //pid_t pid = fork();
-
     pid_t pid = fork();
-
     if (pid < 0)
     {
         perror("fork");
         return 1;
     }
-
     if (pid == 0)
     {
         execvp(argv[0], argv);
         perror(argv[0]);
         _exit(127);
     }
-
     int status;
     waitpid(pid, &status, 0);
      for (int i = 0; i < count; i++)
@@ -67,7 +61,6 @@ static int exec_command(char **argv)
     free(expanded_argv);
     if (WIFEXITED(status))
         return WEXITSTATUS(status);
-
     return 1;
 }
 
@@ -191,138 +184,142 @@ static int exec_if(struct ast *ast)
             return cond;
 }
 
-/*static int exec_while(struct ast *ast)
-{
-	 printf("DEBUG: exec_while called\n");
-	struct ast_while *w = (struct ast_while *)ast;
-        //      struct ast_while *w = (struct ast_while *)ast;
-                int status = 0;
-                while (1)
-                {
-			printf("DEBUG: while condition returned %d\n", status);
-                        status = exec_ast(w->condition);
-                        if (status != 0)
-                                break;
-                        status = exec_ast(w->body);
-			printf("DEBUG: while body returned %d\n", status);
-                }
-                return status;
-}*/
-static int exec_while(struct ast *ast)
-{
-	  if (!ast) return 0;
-    struct ast_while *w = (struct ast_while *)ast;
-      if (!w || !w->condition || !w->body)
-        return 0;
 
-    int cond_status = 0;
-    int body_status = 0;
-
-    while (1)
-    {
-        cond_status = exec_ast(w->condition);  // Évalue la condition
-        if (cond_status != 0)                  // Si condition échoue, break
-            break;
-        body_status = exec_ast(w->body);       // Évalue le corps
-    }
-    return body_status;  // Retourner le dernier code de retour du corps
-}
-
-/*static int exec_until(struct ast *ast)
+static int exec_until(struct ast *ast)
 {
 	struct ast_until *u = (struct ast_until *)ast;
                 int status = 0;
                 while (1)
                 {
                         status = exec_ast(u->condition);
-                        if (status == 0)
+                        if (status != 0)
                                 break;
                         status = exec_ast(u->body);
                 }
                 return status;
-}*/
-static int exec_until(struct ast *ast)
+}
+
+static int exec_while(struct ast *ast)
 {
-    struct ast_until *u = (struct ast_until *)ast;
-    int cond_status = 0;
-    int body_status = 0;
-    
+    struct ast_while *w = (struct ast_while *)ast;
+    int status = 0;
+
     while (1)
     {
-        cond_status = exec_ast(u->condition);
-        if (cond_status == 0)  // until s'arrête quand condition réussit
+        status = exec_ast(w->condition);
+        if (status != 0)
             break;
-        body_status = exec_ast(u->body);
+        status = exec_ast(w->body);
     }
-    return body_status;
+
+    return status;
 }
 
 
-/*static int exec_for(struct ast *ast)
-{
-	struct ast_for *f = (struct ast_for *)ast;
-            int status = 0;
-           if (!f->words)
-                   return 0;
-           for (size_t i = 0; f->words[i] != NULL; i++)
-           {
-                if (g_parser)
-                    add_var(g_parser, f->var, f->words[i]);
-                status = exec_ast(f->body);
-	   }
-	   return status;
-}*/
 
+static struct variable *get_var(struct parser *parser, const char *name)
+{
+    struct variable *cur = parser->var;
+
+    while (cur)
+    {
+        if (strcmp(cur->nom, name) == 0)
+            return cur;
+        cur = cur->next;
+    }
+    return NULL;
+}
+
+
+static char *save_before_value(struct parser *parser,const char *name, int *defined)
+{
+    struct variable *var = get_var(parser, name);
+    if (var && var->value)
+    {
+        *defined = 1;
+        return strdup(var->value);
+    }
+    *defined = 0;
+    return NULL;
+}
+
+
+static void restore_before(struct parser *parser,const char *name, char *before_value,int defined)
+{
+    struct variable *cur = parser->var;
+    struct variable *prev = NULL;
+    if (defined && before_value)
+    {
+        add_var(parser, (char *)name, before_value);
+        free(before_value);
+        return;
+    }
+    while (cur)
+    {
+        if (strcmp(cur->nom, name) == 0)
+        {
+            if (prev)
+	    {
+                prev->next = cur->next;
+	    }
+            else
+	    {
+                parser->var = cur->next;
+	    }
+            free(cur->nom);
+            free(cur->value);
+            free(cur);
+            return;
+        }
+        prev = cur;
+        cur = cur->next;
+    }
+}
+
+static void update(struct parser *parser, const char *name, const char *value)
+{
+    add_var(parser, (char *)name, (char *)value);
+    struct variable *var = get_var(parser, name);
+    if (var)
+    {
+        var->exported = 0;
+    }
+}
 
 
 static int exec_for(struct ast *ast)
 {
-    struct ast_for *f = (struct ast_for *)ast;
+    struct ast_for *res = (struct ast_for *)ast;
     int status = 0;
-    if (!f->words)
+    char *before_value = NULL;
+    int defined = 0;
+    if (g_parser)
     {
-        status = exec_ast(f->body);
-        return status;
+        before_value = save_before_value(g_parser,res->var,&defined);
     }
-    for (size_t i = 0; f->words[i] != NULL; i++)
+    if (!res->words)
     {
-        if (g_parser)
-	{
-            add_var(g_parser, f->var, f->words[i]);
-	   /* struct variable *v = g_parser->var;
-            while (v)
-            {
-                printf("  - %s=%s\n", v->nom, v->value);
-                v = v->next;
-            }*/
-	}
-
-        status = exec_ast(f->body);
+        status = exec_ast(res->body);
+    }
+    else
+    {
+        for (size_t i = 0; res->words[i]; i++)
+        {
+            if (g_parser)
+	    {
+                update(g_parser,res->var,res->words[i]);
+	    }
+            status = exec_ast(res->body);
+        }
     }
 
+    if (g_parser)
+    {
+        restore_before(g_parser,res->var,before_value,defined);
+    }
     return status;
 }
-/*static int exec_for(struct ast *ast, struct parser *parser)
-{
-    struct ast_for *f = (struct ast_for *)ast;
-    int status = 0;
-    
-    if (!f->words)
-        return 0;
-    
-    for (size_t i = 0; f->words[i] != NULL; i++)
-    {
-        // Assigner la variable pour cette itération
-	if (g_parser)
-            add_var(g_parser, f->var, f->words[i]);*/
-       /* if (parser)
-            add_var(parser, f->var, f->words[i]);
-        
-        status = exec_ast(f->body);
-    }
-    
-    return status;
-}*/
+
 
 static int exec_and(struct ast *ast)
 {

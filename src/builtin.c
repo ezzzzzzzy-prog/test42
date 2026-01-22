@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "builtin.h"
 #include <string.h>
 #include <stdio.h>
@@ -22,6 +23,8 @@ int is_builtin(const char *cmd)
         return 1;
     if (strcmp(cmd, "cd") == 0)
         return 1;
+    if(strcmp(cmd, "export")==0)
+	    return 1;
     
     return 0;
 }
@@ -149,10 +152,10 @@ static int builtin_echo(char **argv, struct parser *parser)
             echo_print(expanded, e_flag);
             free(expanded);
         }
-        else
+        /*else
         {
             echo_print(argv[idx], e_flag);
-        }
+        }*/
 /*	if (argv[idx][0] == '$')
         {
             const char *varname = argv[idx] + 1;
@@ -171,6 +174,7 @@ static int builtin_echo(char **argv, struct parser *parser)
         {
             echo_print(argv[idx], e_flag);
         }*/
+	//echo_print(argv[idx], e_flag);
         idx++;
     }
     
@@ -232,6 +236,42 @@ static int builtin_cd(char **argv)
     return 0;
 }
 
+static int builtin_export(char **argv, struct parser *parser)
+{
+	if(!argv[1])
+	{
+		return 0;
+	}
+	char *arg = argv[1];
+	char *equal = strchr(arg, '=');
+	char *name;
+	char *value;
+	if(equal)
+	{
+		*equal = '\0';
+		name = arg;
+		value = equal + 1;
+	}
+	else
+	{
+		name = arg;
+		value = "";
+	}
+	add_var(parser, name, value);
+	struct variable *v = parser->var;
+	while(v)
+	{
+		if(strcmp(v->nom,name ) == 0)
+		{
+			v->exported = 1;
+			setenv(name, value, 1);
+			break;
+		}
+		v =v->next;
+	}
+	return 0;
+}
+
 int execute_builtin(char **argv, struct parser *parser)
 {
     if (argv == NULL || argv[0] == NULL)
@@ -253,6 +293,8 @@ int execute_builtin(char **argv, struct parser *parser)
     
     if (strcmp(cmd, "cd") == 0)
         return builtin_cd(argv);
+    if (strcmp(cmd, "export") == 0)
+	    return builtin_export(argv,parser);
     
     return -1;
 }
