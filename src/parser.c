@@ -149,10 +149,10 @@ struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
 {
     if (!parser || !parser->curr_tok || !is_redirection(parser->curr_tok->type))
         return NULL;
-    int file_desc = -1;
+    int redir_nb = -1;
     if (parser->curr_tok->type == TOK_REDIR_NB)
     {
-        file_desc = atoi(parser->curr_tok->val);
+        redir_nb = atoi(parser->curr_tok->val);
         parser_consume(parser);
         if (!parser->curr_tok || !is_redirection(parser->curr_tok->type))
             return NULL;
@@ -181,7 +181,7 @@ struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
         return NULL;
     char *f = strdup(parser->curr_tok->val);
     parser_consume(parser);
-    return create_redir(curr_redir_type, left_cmd, f, file_desc);
+    return create_redir(curr_redir_type, left_cmd, f, redir_nb);
 }
 
 static struct ast *app_redir(struct ast *root, struct ast *new_redir)

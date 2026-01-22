@@ -228,19 +228,6 @@ static int exec_while(struct ast *ast)
     return body_status;  // Retourner le dernier code de retour du corps
 }
 
-/*static int exec_until(struct ast *ast)
-{
-	struct ast_until *u = (struct ast_until *)ast;
-                int status = 0;
-                while (1)
-                {
-                        status = exec_ast(u->condition);
-                        if (status == 0)
-                                break;
-                        status = exec_ast(u->body);
-                }
-                return status;
-}*/
 static int exec_until(struct ast *ast)
 {
     struct ast_until *u = (struct ast_until *)ast;
@@ -256,24 +243,6 @@ static int exec_until(struct ast *ast)
     }
     return body_status;
 }
-
-
-/*static int exec_for(struct ast *ast)
-{
-	struct ast_for *f = (struct ast_for *)ast;
-            int status = 0;
-           if (!f->words)
-                   return 0;
-           for (size_t i = 0; f->words[i] != NULL; i++)
-           {
-                if (g_parser)
-                    add_var(g_parser, f->var, f->words[i]);
-                status = exec_ast(f->body);
-	   }
-	   return status;
-}*/
-
-
 
 static int exec_for(struct ast *ast)
 {
@@ -343,128 +312,115 @@ static int exec_or(struct ast *ast)
                 return exec_ast(or->right);
             return status;
 }
-
-/*static int exec_redirection(struct ast *ast)
+//trouver quelle fd on redirect
+static int find_targ_fd(struct ast_redirection *r)
 {
-	struct ast_redirection *r = (struct ast_redirection *) ast;
-                int fd = -1;
-                int tar_fd = (r->type == AST_REDIR_IN) ? 0 : 1;
-                int sav_fd = dup(tar_fd);
-                if (r->type == AST_REDIR_IN)
-                        fd = open(r->file, O_RDONLY);
-                else if (r->type == AST_REDIR_OUT)
-                        fd = open(r->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                else if (r->type == AST_REDIR_APP)
-                        fd = open(r->file, O_WRONLY | O_CREAT | O_APPEND, 0644);
-                if (fd < 0)
-                {
-                        if (sav_fd != -1)
-                                close(sav_fd);
-                        return 1;
-                }
-                dup2(fd, tar_fd);
-                close(fd);
-                int status = 0;
-                if (r->left)
-                        status = exec_ast(r->left);
-                if (sav_fd != -1)
-                {
-                        dup2(sav_fd, tar_fd);
-                        close(sav_fd);
-                }
-                return status;
-}*/
-
-static void apply_one_redirection(struct ast_redirection *r)
-{
-    int tar_fd;
-    if (r->file_desc != -1)
-        tar_fd = r->file_desc;
+    int target_fd;
+     if (r->redir_nb != -1)
+        target_fd = r->redir_nb;
     else if (r->type == AST_REDIR_IN || r->type == AST_REDIR_DUP_IN)
-        tar_fd = STDIN_FILENO;
-    else if (r->type == AST_REDIR_OUT || r->type == AST_REDIR_FORC_OUT || r->type == AST_REDIR_APP)
-        tar_fd = STDOUT_FILENO;
+        target_fd = STDIN_FILENO;
+    else if (r->type == AST_REDIR_OUT || r->type == AST_REDIR_FORC_OUT
+    || r->type == AST_REDIR_APP)
+        target_fd = STDOUT_FILENO;
     else
-        tar_fd = STDERR_FILENO;
-
-    int fd = -1;
-
-    switch (r->type)
-    {
-        case AST_REDIR_IN:
-            fd = open(r->file, O_RDONLY);
-            break;
-
-        case AST_REDIR_OUT:
-        case AST_REDIR_FORC_OUT:
-            fd = open(r->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            if (fd < 0)
-                _exit(1);
-
-            dup2(fd, tar_fd);
-            close(fd);
-            return;
-
-        case AST_REDIR_APP:
-            fd = open(r->file, O_WRONLY | O_CREAT | O_APPEND, 0644);
-            break;
-
-        case AST_REDIR_RW:
-            fd = open(r->file, O_RDWR);
-            if (fd < 0)
-                _exit(1);
-            dup2(fd, STDIN_FILENO);
-            close(fd);
-            return;
-
-        case AST_REDIR_DUP_OUT:
-        case AST_REDIR_DUP_IN:
-            dup2(atoi(r->file), tar_fd);
-            return;
-
-        default:
-            _exit(1);
-    }
-
-    if (fd < 0)
-        _exit(1);
-
-    dup2(fd, tar_fd);
-    close(fd);
+        target_fd = STDERR_FILENO;
+    return target_fd;
 }
 
-static struct ast *apply_redirections(struct ast *ast)
+static void redirect(struct ast_redirection *r)
+{
+    int target_fd = find_targ_fd(r);
+    int fd;
+
+    fd = -1;
+
+    if (r->type == AST_REDIR_IN)
+    {
+        fd = open(r->file, O_RDONLY);
+        if (fd < 0)
+            _exit(1);
+        //remplace le terminal avec le fd quon veut (stdin pointe vers out.txt pas termianl)
+        dup2(fd, target_fd);
+        //ferme pour pas avoir de bugs
+        close(fd);
+    }
+    //pour linstant jai mis force et out pareil
+    else if (r->type == AST_REDIR_OUT || r->type == AST_REDIR_FORC_OUT)
+    {
+        fd = open(r->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0)
+            _exit(1);
+        dup2(fd, target_fd);
+        close(fd);
+    }
+    else if (r->type == AST_REDIR_APP)
+    {
+        fd = open(r->file, O_WRONLY | O_CREAT | O_APPEND, 0644);
+        if (fd < 0)
+            _exit(1);
+        dup2(fd, target_fd);
+        close(fd);
+    }
+    else if (r->type == AST_REDIR_RW)
+    {
+        fd = open(r->file, O_RDWR);
+        if (fd < 0)
+            _exit(1);
+        dup2(fd, STDIN_FILENO);
+        close(fd);
+    }
+    //trouve ou ecrire avec atoi
+    else if (r->type == AST_REDIR_DUP_OUT || r->type == AST_REDIR_DUP_IN)
+        dup2(atoi(r->file), target_fd);
+    else
+        _exit(1);
+}
+
+static struct ast *all_redirections(struct ast *ast)
 {
     while (ast->type == AST_REDIRECTION)
     {
         struct ast_redirection *r = (struct ast_redirection *)ast;
-        apply_one_redirection(r);
+        redirect(r);
         ast = r->left;
     }
     return ast;
 }
+
 static int exec_redirection(struct ast *ast)
 {
-    pid_t pid = fork();
+    //create child process
+    pid_t pid;
+    int status;
+
+    pid = fork();
     if (pid < 0)
         return 1;
-
+    //dans lenfant
     if (pid == 0)
     {
-        struct ast *cmd = apply_redirections(ast);
+        struct ast *cmd;
+        //trouve la cmd de redir ligne et changer fd en ce que tu veux (out.txt)
+        cmd = all_redirections(ast);
+        //si cmd lexecuter
         if (cmd->type == AST_COMMAND)
         {
-            struct ast_cmd *c = (struct ast_cmd *)cmd;
+            struct ast_cmd *c;
+
+            c = (struct ast_cmd *)cmd;
             execvp(c->words[0], c->words);
             _exit(127);
         }
 
         _exit(exec_ast(cmd));
     }
-
-    int status;
+    //attendre que process enfant finis
     waitpid(pid, &status, 0);
-    return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+    //exit code de lenfant si finis
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+    return 1;
 }
 
 int exec_ast(struct ast *ast)
@@ -526,8 +482,6 @@ int exec_ast(struct ast *ast)
             return 0;
     }
 }
-
-
 
 
 void exec_set_parser(struct parser *parser)

@@ -37,7 +37,7 @@ struct ast_redirection
     enum redir_type type;
     struct ast *left;
     char *file;
-    int file_desc;
+    int redir_nb;
 };
     
 struct  ast_while
