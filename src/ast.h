@@ -13,7 +13,8 @@ enum ast_type
     AST_AND,
     AST_OR,
     AST_PIPELINE,
-    AST_REDIRECTION
+    AST_REDIRECTION,
+    AST_SUBSHELL
 };
 enum redir_type
 {
@@ -103,6 +104,11 @@ struct ast_negation
     struct ast base;
     struct ast *child;
 };
+struct ast_subshell
+{
+    struct ast base;
+    struct ast *body;
+};
 
 struct ast *create_cmd(char **words);
 struct ast *create_list(struct ast **cmds, size_t count);
@@ -117,6 +123,7 @@ struct ast *create_redir(enum redir_type type, struct ast *left, char *file, int
 struct ast *create_while(struct ast *cond, struct ast *body);
 struct ast *create_until(struct ast *cond, struct ast *body);
 struct ast *create_for(char *var, char **words, struct ast *body);
+struct ast *create_subshell(struct ast *body);
 void ast_free(struct ast *ast);
 
 #endif /* AST_H */

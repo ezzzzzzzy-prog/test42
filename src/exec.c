@@ -1,16 +1,18 @@
 #define _POSIX_C_SOURCE 200809L
 #include "exec.h"
+
+#include <err.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "ast.h"
 #include "builtin.h"
-#include "parser.h"
 #include "expansion.h"
-#include <unistd.h>
-#include <sys/wait.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <err.h> 
-#include <string.h>
+#include "parser.h"
 
 struct parser *g_parser = NULL;
 
@@ -21,14 +23,14 @@ static int exec_command(char **argv)
 
     if (is_builtin(argv[0]))
     {
-        return execute_builtin(argv,g_parser);
+        return execute_builtin(argv, g_parser);
     }
     char **expanded_argv = malloc(sizeof(char *) * 64);
     if (!expanded_argv)
         return 1;
-    
+
     int count = 0;
-    
+
     for (int i = 0; argv[i] != NULL && i < 63; i++)
     {
         char *expanded = expand(g_parser, g_parser->spe, argv[i]);
@@ -42,8 +44,8 @@ static int exec_command(char **argv)
         }
     }
     expanded_argv[count] = NULL;
-    
-    //pid_t pid = fork();
+
+    // pid_t pid = fork();
 
     pid_t pid = fork();
 
@@ -58,13 +60,13 @@ static int exec_command(char **argv)
         execvp(argv[0], argv);
         fprintf(stderr, "%s command not found\n", argv[0]);
 
-//        perror(argv[0]);
+        //        perror(argv[0]);
         _exit(127);
     }
 
     int status;
     waitpid(pid, &status, 0);
-     for (int i = 0; i < count; i++)
+    for (int i = 0; i < count; i++)
         free(expanded_argv[i]);
     free(expanded_argv);
     if (WIFEXITED(status))
@@ -73,47 +75,47 @@ static int exec_command(char **argv)
     return 1;
 }
 
-static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd, int pipefd[2])
+static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
+                       int pipefd[2])
 {
-	if (prev_fd != -1)
-            {
-                dup2(prev_fd, STDIN_FILENO);
-                close(prev_fd);
-            }
-            if( i + 1 < p->count)
-            {
-                    dup2(pipefd[1], STDOUT_FILENO);
-                    close(pipefd[1]);
-                    close(pipefd[0]);
-            }
-            if(prev_fd != -1)
-            {
-                    close(prev_fd);
-            }
-            int child = exec_ast(p->cmds[i]);
-            exit(child);
+    if (prev_fd != -1)
+    {
+        dup2(prev_fd, STDIN_FILENO);
+        close(prev_fd);
+    }
+    if (i + 1 < p->count)
+    {
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+        close(pipefd[0]);
+    }
+    if (prev_fd != -1)
+    {
+        close(prev_fd);
+    }
+    int child = exec_ast(p->cmds[i]);
+    exit(child);
 }
-
 
 static int exec_pipeline(struct ast_pipeline *p)
 {
-        if(!p || p->count == 0)
-        {
-                return 0;
-        }
-        if(p->count == 1)
-        {
-                return exec_ast(p->cmds[0]);
-        }
+    if (!p || p->count == 0)
+    {
+        return 0;
+    }
+    if (p->count == 1)
+    {
+        return exec_ast(p->cmds[0]);
+    }
     int prev_fd = -1;
-    //int status = 0;
+    // int status = 0;
     pid_t *pids = malloc(p->count * sizeof(pid_t));
     if (!pids)
         return 1;
     int pipefd[2];
     for (size_t i = 0; i < p->count; i++)
     {
-        //int pipefd[2] = { -1, -1 };
+        // int pipefd[2] = { -1, -1 };
 
         if (i + 1 < p->count)
         {
@@ -134,14 +136,14 @@ static int exec_pipeline(struct ast_pipeline *p)
         }
 
         if (pid == 0)
-		exec_child(p,i,prev_fd, pipefd);
+            exec_child(p, i, prev_fd, pipefd);
 
         pids[i] = pid;
 
         if (prev_fd != -1)
             close(prev_fd);
 
-        if (i +1 < p->count)
+        if (i + 1 < p->count)
         {
             close(pipefd[1]);
             prev_fd = pipefd[0];
@@ -171,50 +173,51 @@ static int exec_negation(struct ast_negation *n)
 
 static int exec_list(struct ast *ast)
 {
-	 struct ast_list *list = (struct ast_list *)ast;
-            int status = 0;
+    struct ast_list *list = (struct ast_list *)ast;
+    int status = 0;
 
-            for (size_t i = 0; i < list->count; i++)
-                status = exec_ast(list->commands[i]);
+    for (size_t i = 0; i < list->count; i++)
+        status = exec_ast(list->commands[i]);
 
-            return status;
+    return status;
 }
 
 static int exec_if(struct ast *ast)
 {
-	struct ast_if *ifn = (struct ast_if *)ast;
-            int cond = exec_ast(ifn->condition);
+    struct ast_if *ifn = (struct ast_if *)ast;
+    int cond = exec_ast(ifn->condition);
 
-            if (cond == 0)
-                return exec_ast(ifn->then_body);
-            else if (ifn->else_body)
-                return exec_ast(ifn->else_body);
+    if (cond == 0)
+        return exec_ast(ifn->then_body);
+    else if (ifn->else_body)
+        return exec_ast(ifn->else_body);
 
-            return cond;
+    return cond;
 }
 
 /*static int exec_while(struct ast *ast)
 {
-	 printf("DEBUG: exec_while called\n");
-	struct ast_while *w = (struct ast_while *)ast;
+     printf("DEBUG: exec_while called\n");
+    struct ast_while *w = (struct ast_while *)ast;
         //      struct ast_while *w = (struct ast_while *)ast;
                 int status = 0;
                 while (1)
                 {
-			printf("DEBUG: while condition returned %d\n", status);
+            printf("DEBUG: while condition returned %d\n", status);
                         status = exec_ast(w->condition);
                         if (status != 0)
                                 break;
                         status = exec_ast(w->body);
-			printf("DEBUG: while body returned %d\n", status);
+            printf("DEBUG: while body returned %d\n", status);
                 }
                 return status;
 }*/
 static int exec_while(struct ast *ast)
 {
-	  if (!ast) return 0;
+    if (!ast)
+        return 0;
     struct ast_while *w = (struct ast_while *)ast;
-      if (!w || !w->condition || !w->body)
+    if (!w || !w->condition || !w->body)
         return 0;
 
     int cond_status = 0;
@@ -222,12 +225,12 @@ static int exec_while(struct ast *ast)
 
     while (1)
     {
-        cond_status = exec_ast(w->condition);  // Évalue la condition
-        if (cond_status != 0)                  // Si condition échoue, break
+        cond_status = exec_ast(w->condition); // Évalue la condition
+        if (cond_status != 0) // Si condition échoue, break
             break;
-        body_status = exec_ast(w->body);       // Évalue le corps
+        body_status = exec_ast(w->body); // Évalue le corps
     }
-    return body_status;  // Retourner le dernier code de retour du corps
+    return body_status; // Retourner le dernier code de retour du corps
 }
 
 static int exec_until(struct ast *ast)
@@ -235,11 +238,11 @@ static int exec_until(struct ast *ast)
     struct ast_until *u = (struct ast_until *)ast;
     int cond_status = 0;
     int body_status = 0;
-    
+
     while (1)
     {
         cond_status = exec_ast(u->condition);
-        if (cond_status == 0)  // until s'arrête quand condition réussit
+        if (cond_status == 0) // until s'arrête quand condition réussit
             break;
         body_status = exec_ast(u->body);
     }
@@ -258,15 +261,15 @@ static int exec_for(struct ast *ast)
     for (size_t i = 0; f->words[i] != NULL; i++)
     {
         if (g_parser)
-	{
+        {
             add_var(g_parser, f->var, f->words[i]);
-	   /* struct variable *v = g_parser->var;
-            while (v)
-            {
-                printf("  - %s=%s\n", v->nom, v->value);
-                v = v->next;
-            }*/
-	}
+            /* struct variable *v = g_parser->var;
+                 while (v)
+                 {
+                     printf("  - %s=%s\n", v->nom, v->value);
+                     v = v->next;
+                 }*/
+        }
 
         status = exec_ast(f->body);
     }
@@ -277,53 +280,53 @@ static int exec_for(struct ast *ast)
 {
     struct ast_for *f = (struct ast_for *)ast;
     int status = 0;
-    
+
     if (!f->words)
         return 0;
-    
+
     for (size_t i = 0; f->words[i] != NULL; i++)
     {
         // Assigner la variable pour cette itération
-	if (g_parser)
+    if (g_parser)
             add_var(g_parser, f->var, f->words[i]);*/
-       /* if (parser)
-            add_var(parser, f->var, f->words[i]);
-        
-        status = exec_ast(f->body);
-    }
-    
-    return status;
+/* if (parser)
+     add_var(parser, f->var, f->words[i]);
+
+ status = exec_ast(f->body);
+}
+
+return status;
 }*/
 
 static int exec_and(struct ast *ast)
 {
-	struct ast_and_or *and = (struct ast_and_or *)ast;
-            int status = exec_ast(and->left);
+    struct ast_and_or *and = (struct ast_and_or *)ast;
+    int status = exec_ast(and->left);
 
-            if (status == 0)
-                return exec_ast(and->right);
-            return status;
+    if (status == 0)
+        return exec_ast(and->right);
+    return status;
 }
 
 static int exec_or(struct ast *ast)
 {
-	struct ast_and_or *or = (struct ast_and_or *)ast;
-            int status = exec_ast(or->left);
+    struct ast_and_or * or = (struct ast_and_or *)ast;
+    int status = exec_ast(or->left);
 
-            if (status != 0)
-                return exec_ast(or->right);
-            return status;
+    if (status != 0)
+        return exec_ast(or->right);
+    return status;
 }
-//trouver quelle fd on redirect
+// trouver quelle fd on redirect
 static int find_targ_fd(struct ast_redirection *r)
 {
     int target_fd;
-     if (r->redir_nb != -1)
+    if (r->redir_nb != -1)
         target_fd = r->redir_nb;
     else if (r->type == AST_REDIR_IN || r->type == AST_REDIR_DUP_IN)
         target_fd = STDIN_FILENO;
     else if (r->type == AST_REDIR_OUT || r->type == AST_REDIR_FORC_OUT
-    || r->type == AST_REDIR_APP)
+             || r->type == AST_REDIR_APP)
         target_fd = STDOUT_FILENO;
     else
         target_fd = STDERR_FILENO;
@@ -342,12 +345,13 @@ static void redirect(struct ast_redirection *r)
         fd = open(r->file, O_RDONLY);
         if (fd < 0)
             _exit(1);
-        //remplace le terminal avec le fd quon veut (stdin pointe vers out.txt pas termianl)
+        // remplace le terminal avec le fd quon veut (stdin pointe vers out.txt
+        // pas termianl)
         dup2(fd, target_fd);
-        //ferme pour pas avoir de bugs
+        // ferme pour pas avoir de bugs
         close(fd);
     }
-    //pour linstant jai mis force et out pareil
+    // pour linstant jai mis force et out pareil
     else if (r->type == AST_REDIR_OUT || r->type == AST_REDIR_FORC_OUT)
     {
         fd = open(r->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -372,19 +376,19 @@ static void redirect(struct ast_redirection *r)
         dup2(fd, STDIN_FILENO);
         close(fd);
     }
-    //trouve ou ecrire avec atoi
+    // trouve ou ecrire avec atoi
     else if (r->type == AST_REDIR_DUP_OUT || r->type == AST_REDIR_DUP_IN)
         dup2(atoi(r->file), target_fd);
     else
         _exit(1);
 }
-//pour multi redir
+// pour multi redir
 static struct ast *all_redirections(struct ast *ast)
 {
     while (ast->type == AST_REDIRECTION)
     {
         struct ast_redirection *r = (struct ast_redirection *)ast;
-        //change ou ca pointe 
+        // change ou ca pointe
         redirect(r);
         // ou le faire
         ast = r->left;
@@ -394,20 +398,21 @@ static struct ast *all_redirections(struct ast *ast)
 
 static int exec_redirection(struct ast *ast)
 {
-    //create child process
+    // create child process
     pid_t pid;
     int status;
 
     pid = fork();
     if (pid < 0)
         return 1;
-    //dans lenfant
+    // dans lenfant
     if (pid == 0)
     {
         struct ast *cmd;
-        //trouve la cmd de redir ligne et changer fd en ce que tu veux (out.txt)
+        // trouve la cmd de redir ligne et changer fd en ce que tu veux
+        // (out.txt)
         cmd = all_redirections(ast);
-        //si cmd lexecuter
+        // si cmd lexecuter
         if (cmd->type == AST_COMMAND)
         {
             struct ast_cmd *c;
@@ -419,9 +424,30 @@ static int exec_redirection(struct ast *ast)
 
         _exit(exec_ast(cmd));
     }
-    //attendre que process enfant finis
+    // attendre que process enfant finis
     waitpid(pid, &status, 0);
-    //exit code de lenfant si finis
+    // exit code de lenfant si finis
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+    return 1;
+}
+static int exec_subshell(struct ast *ast)
+{
+    struct ast_subshell *s = (struct ast_subshell *)ast;
+    // child
+    pid_t pid = fork();
+    if (pid < 0)
+        return 1;
+    // in child
+    if (pid == 0)
+    {
+        // execute whats in paran or brack
+        int status = exec_ast(s->body);
+        _exit(status);
+    }
+    // exit code returns
+    int status;
+    waitpid(pid, &status, 0);
     if (WIFEXITED(status))
         return WEXITSTATUS(status);
     return 1;
@@ -437,59 +463,50 @@ int exec_ast(struct ast *ast)
 
     switch (ast->type)
     {
-        case AST_COMMAND:
-        {
-            struct ast_cmd *cmd = (struct ast_cmd *)ast;
-            return exec_command(cmd->words);
-        }
+    case AST_COMMAND: {
+        struct ast_cmd *cmd = (struct ast_cmd *)ast;
+        return exec_command(cmd->words);
+    }
 
-        case AST_LIST:
-        {
-		return exec_list(ast);
-        }
+    case AST_LIST: {
+        return exec_list(ast);
+    }
 
-        case AST_IF:
-        {
-		return exec_if(ast);
-        }
-	case AST_WHILE:
-        {
-		return exec_while(ast);
+    case AST_IF: {
+        return exec_if(ast);
+    }
+    case AST_WHILE: {
+        return exec_while(ast);
+    }
+    case AST_UNTIL: {
+        return exec_until(ast);
+    }
+    case AST_FOR: {
+        return exec_for(ast);
+    }
+    case AST_PIPELINE:
+        return exec_pipeline((struct ast_pipeline *)ast);
+    case AST_NEGATION: {
+        struct ast_negation *n = (struct ast_negation *)ast;
+        return exec_negation(n);
+    }
+    case AST_AND: {
+        return exec_and(ast);
+    }
 
-        }
-        case AST_UNTIL:
-        {
-		return exec_until(ast);
-        }
-        case AST_FOR:
-        {
-		return exec_for(ast);
-        }
-        case AST_PIPELINE:
-            return exec_pipeline((struct ast_pipeline *)ast);
-        case AST_NEGATION:
-        {
-            struct ast_negation *n = (struct ast_negation *)ast;
-            return exec_negation(n);
-        }
-        case AST_AND:
-        {
-		return exec_and(ast);
-        }
-
-        case AST_OR:
-        {
-		return exec_or(ast);
-        }
-        case AST_REDIRECTION:
-        {
-		return exec_redirection(ast);
-        }
-        default:
-            return 0;
+    case AST_OR: {
+        return exec_or(ast);
+    }
+    case AST_REDIRECTION: {
+        return exec_redirection(ast);
+    }
+    case AST_SUBSHELL: {
+        return exec_subshell(ast);
+    }
+    default:
+        return 0;
     }
 }
-
 
 void exec_set_parser(struct parser *parser)
 {

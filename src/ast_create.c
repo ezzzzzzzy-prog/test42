@@ -122,7 +122,8 @@ struct ast *create_or(struct ast *left, struct ast *right)
     or->right = right;
     return (struct ast *) or ;
 }
-struct ast *create_redir(enum redir_type type, struct ast *left, char *file, int redir_nb)
+struct ast *create_redir(enum redir_type type, struct ast *left, char *file,
+                         int redir_nb)
 {
     struct ast_redirection *redir = malloc(sizeof(*redir));
     if (!redir)
@@ -134,6 +135,15 @@ struct ast *create_redir(enum redir_type type, struct ast *left, char *file, int
     redir->file = file;
     redir->redir_nb = redir_nb;
     return (struct ast *)redir;
+}
+struct ast *create_subshell(struct ast *body)
+{
+    struct ast_subshell *s = malloc(sizeof(*s));
+    if (!s)
+        return NULL;
+    s->base.type = AST_SUBSHELL;
+    s->body = body;
+    return (struct ast *)s;
 }
 
 static void free_words(char **words)
@@ -218,6 +228,11 @@ static void free_redirection(struct ast *ast)
     free(redir->file);
     ast_free(redir->left);
 }
+static void free_subshell(struct ast *ast)
+{
+    struct ast_subshell *s = (struct ast_subshell *)ast;
+    ast_free(s->body);
+}
 
 void ast_free(struct ast *ast)
 {
@@ -271,6 +286,10 @@ void ast_free(struct ast *ast)
     }
     case AST_REDIRECTION: {
         free_redirection(ast);
+        break;
+    }
+    case AST_SUBSHELL: {
+        free_subshell(ast);
         break;
     }
     }

@@ -391,6 +391,14 @@ return tok;*/
         }
         return new_tok(TOK_WORD, my_strdup("&"));
     }
+    if (c == '(')
+        return new_tok(TOK_SUB_LP, NULL);
+    if (c == ')')
+        return new_tok(TOK_SUB_RP, NULL);
+    if (c == '{')
+        return new_tok(TOK_SUB_LB, NULL);
+    if (c == '}')
+        return new_tok(TOK_SUB_RB, NULL);
 
     return read_tok(c);
 }
