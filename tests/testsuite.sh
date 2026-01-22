@@ -66,7 +66,12 @@ for dir in "$TEST_ROOT"/*; do
 
         if [ "$err_diff_rc" -ne 0 ]; then
             echo "DIFFERENT ERROR OUTPUTS:"
-            diff -u "$err_file" "$err_tmp"
+            if [ -f "$err_file" ]; then
+                diff -u "$err_file" "$err_tmp"
+            else
+                echo " expected: <empty stderr>"
+                cat "$err_tmp"
+            fi
         fi
     fi
 

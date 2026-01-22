@@ -71,9 +71,10 @@ int main(int argc, char **argv)
 
     free_special(parser->spe);
     parser_free(parser);
-    io_backend_close();
+    //io_backend_close();
     if(parser->exit)
-        return parser->ex_code;
+        _exit(parser->ex_code);
+    io_backend_close();
     return status;
 }
 

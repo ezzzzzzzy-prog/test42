@@ -56,7 +56,9 @@ static int exec_command(char **argv)
     if (pid == 0)
     {
         execvp(argv[0], argv);
-        perror(argv[0]);
+        fprintf(stderr, "%s command not found\n", argv[0]);
+
+//        perror(argv[0]);
         _exit(127);
     }
 
@@ -427,6 +429,9 @@ static int exec_redirection(struct ast *ast)
 
 int exec_ast(struct ast *ast)
 {
+    if (g_parser && g_parser->exit)
+        return g_parser->ex_code;
+
     if (!ast)
         return 0;
 

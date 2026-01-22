@@ -257,7 +257,7 @@ static struct token *read_tok(int c)
 {
     int cap = 64;
     int s = 0;
-   // int sg_qt = 0;
+    // int sg_qt = 0;
     int db_qt = 0;
     char *buf = malloc(cap);
     buf[0] = '\0';
@@ -266,25 +266,8 @@ static struct token *read_tok(int c)
     {
         if (c == '"')
         {
-        /*    db_qt = 1;
-    while ((c = io_backend_next()) != EOF && c != '"')
-    {
-        if (c == '\\')
-        {
-            int n = io_backend_peek();
-                io_backend_next();
-                buf = append_char(buf, &s, &cap, n);
-        }
-        else
-            buf = append_char(buf, &s, &cap, c);
-    }
-    db_qt = 0;
-    c = io_backend_next();
-    continue;
-*/
-
             db_qt = 1;
-            c = io_backend_next(); 
+            c = io_backend_next();
             buf = append_char(buf, &s, &cap, c);
             while ((c = io_backend_next()) != EOF && c != '"')
             {
@@ -292,11 +275,11 @@ static struct token *read_tok(int c)
             }
             if (c == '"')
             {
-                db_qt = 0;               // exit double quotes
-c = io_backend_next();   // move past closing "
-continue;
+                db_qt = 0; // exit double quotes
+                c = io_backend_next(); // move past closing "
+                continue;
             }
-            //buf = append_char(buf, &s, &cap, '"');
+            // buf = append_char(buf, &s, &cap, '"');
             db_qt = 0;
         }
         else if (c == '\'')
@@ -304,7 +287,7 @@ continue;
             buf = append_char(buf, &s, &cap, c);
             while ((c = io_backend_next()) != EOF && c != '\'')
             {
-                //buf = esc(buf, &s, &cap, c,db_qt);
+                // buf = esc(buf, &s, &cap, c,db_qt);
                 buf = append_char(buf, &s, &cap, c);
             }
             if (c == '\'')
@@ -317,11 +300,10 @@ continue;
             if (n == '\n')
                 io_backend_next();
             else if (db_qt)
-               buf = append_char(buf, &s, &cap, io_backend_next());
+                buf = append_char(buf, &s, &cap, io_backend_next());
             else
                 buf = append_char(buf, &s, &cap, c);
-        
- }
+        }
         else
             buf = append_char(buf, &s, &cap, c);
 
