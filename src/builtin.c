@@ -24,6 +24,8 @@ int is_builtin(const char *cmd)
         return 1;
     if (strcmp(cmd, "cd") == 0)
         return 1;
+    if (strcmp(cmd, "unset") == 0)
+        return 1;
 
     return 0;
 }
@@ -243,6 +245,70 @@ static int builtin_cd(char **argv)
     return 0;
 }
 
+static int parse_unset_flags(char **argv, int *idx, int *v_flag, int *f_flag)
+{
+    while (argv[*idx] && argv[*idx][0] == '-' && argv[*idx][1])
+    {
+        if (strcmp(argv[*idx], "-v") == 0)
+        {
+            *v_flag = 1;
+            *idx = *idx + 1;
+        }
+        else if (strcmp(argv[*idx], "-f") == 0)
+        {
+            *f_flag = 1;
+            *idx = *idx + 1;
+        }
+        else if (strcmp(argv[*idx], "--") == 0)
+        {
+            *idx = *idx + 1;
+            return 0;
+        }
+        else
+        {
+            fprintf(stderr, "unset: invalid option: %s\n", argv[*idx]);
+            return 2;
+        }
+    }
+    return 0;
+}
+
+static int builtin_unset(char **argv, struct parser *parser)
+{
+    int v_flag = 0;
+    int f_flag = 0;
+    int idx = 1;
+    int error_count = 0;
+    int ret = 0;
+
+    ret = parse_unset_flags(argv, &idx, &v_flag, &f_flag);
+    if (ret != 0)
+        return ret;
+
+    if (argv[idx] == NULL)
+        return 0;
+
+    while (argv[idx])
+    {
+        const char *name = argv[idx];
+        
+        if (f_flag)
+        {
+            if (unset_function(parser, name) != 0)
+                error_count++;
+        }
+        else if (v_flag || !f_flag)
+        {
+            if (unset_variable(parser, name) != 0)
+                error_count++;
+        }
+        
+        idx++;
+    }
+
+    return (error_count > 0) ? 1 : 0;
+}
+
 int execute_builtin(char **argv, struct parser *parser)
 {
     if (argv == NULL || argv[0] == NULL)
@@ -264,6 +330,9 @@ int execute_builtin(char **argv, struct parser *parser)
 
     if (strcmp(cmd, "cd") == 0)
         return builtin_cd(argv);
+
+    if (strcmp(cmd, "unset") == 0)
+        return builtin_unset(argv, parser);
 
     return -1;
 }

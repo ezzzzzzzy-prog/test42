@@ -730,3 +730,49 @@ char *expand(struct parser *parser, struct special *spe, const char *word)
     return ctx.res;
 }
 
+int unset_variable(struct parser *parser, const char *name)
+{
+    if (!parser || !name || !*name)
+        return 1;
+
+    if (strcmp(name, "@") == 0 || strcmp(name, "*") == 0 ||
+        strcmp(name, "#") == 0 || strcmp(name, "?") == 0 ||
+        strcmp(name, "$") == 0 || strcmp(name, "!") == 0 ||
+        strcmp(name, "0") == 0)
+        return 1;
+
+    if (name[0] >= '0' && name[0] <= '9')
+        return 1;
+
+    struct variable *prev = NULL;
+    struct variable *curr = parser->var;
+    
+    while (curr)
+    {
+        if (strcmp(curr->nom, name) == 0)
+        {
+            if (prev)
+                prev->next = curr->next;
+            else
+                parser->var = curr->next;
+            
+            free(curr->nom);
+            free(curr->value);
+            free(curr);
+            
+            return 0;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+    
+    return 0;
+}
+
+int unset_function(struct parser *parser, const char *name)
+{
+    if (!parser || !name || !*name)
+        return 1;
+
+    return 0;
+}
