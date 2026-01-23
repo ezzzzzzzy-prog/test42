@@ -97,7 +97,7 @@ static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
     exit(child);
 }
 
-static int exec_pipeline(struct ast_pipeline *p)
+/*static int exec_pipeline(struct ast_pipeline *p)
 {
     if (!p || p->count == 0)
     {
@@ -162,6 +162,117 @@ static int exec_pipeline(struct ast_pipeline *p)
     return status;
 }
 
+
+static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd, int pipefd[2])
+{
+        if (prev_fd != -1)
+            {
+                dup2(prev_fd, STDIN_FILENO);
+                close(prev_fd);
+            }
+            if( i + 1 < p->count)
+            {
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(pipefd[1]);
+                    close(pipefd[0]);
+            }
+            if(prev_fd != -1)
+            {
+                    close(prev_fd);
+            }
+            int child = exec_ast(p->cmds[i]);
+            exit(child);
+}*/
+
+static int exec_pipeline_simple(struct ast_pipeline *p)
+{
+    if (!p || p->count == 0)
+    {
+        return 0;
+    }
+    if (p->count == 1)
+    {
+        return exec_ast(p->cmds[0]);
+    }
+    return -1;
+}
+
+
+static int exec_pipeline_fork(struct ast_pipeline *p,
+                              pid_t *pids)
+{
+    int prev_fd = -1;
+    int pipefd[2];
+    for (size_t i = 0; i < p->count; i++)
+    {
+        if (i + 1 < p->count)
+        {
+            if (pipe(pipefd) < 0)
+            {
+                perror("pipe");
+                return 0;
+            }
+        }
+        pid_t pid = fork();
+        if (pid < 0)
+        {
+            perror("fork");
+            return 0;
+        }
+        if (pid == 0)
+        {
+            exec_child(p, i, prev_fd, pipefd);
+        }
+        pids[i] = pid;
+        if (prev_fd != -1)
+        {
+                close(prev_fd);
+        }
+        if (i + 1 < p->count)
+        {
+            close(pipefd[1]);
+            prev_fd = pipefd[0];
+        }
+    }
+    return 1;
+}
+
+
+static int exec_pipeline_wait(pid_t *pids, size_t count)
+{
+    int status = 0;
+    for (size_t i = 0; i < count; i++)
+    {
+        int wstatus;
+        waitpid(pids[i], &wstatus, 0);
+        if (i + 1 == count && WIFEXITED(wstatus))
+            status = WEXITSTATUS(wstatus);
+    }
+    return status;
+}
+
+static int exec_pipeline(struct ast_pipeline *p)
+{
+    int simple = exec_pipeline_simple(p);
+    if (simple != -1)
+    {
+        return simple;
+    }
+    pid_t *pids = malloc(p->count * sizeof(pid_t));
+    if (!pids)
+    {
+        return 1;
+    }
+    if (!exec_pipeline_fork(p, pids))
+    {
+        free(pids);
+        return 1;
+    }
+    int status = exec_pipeline_wait(pids, p->count);
+    free(pids);
+    return status;
+}
+
 static int exec_negation(struct ast_negation *n)
 {
     int status = exec_ast(n->child);
@@ -195,108 +306,171 @@ static int exec_if(struct ast *ast)
     return cond;
 }
 
-/*static int exec_while(struct ast *ast)
-{
-     printf("DEBUG: exec_while called\n");
-    struct ast_while *w = (struct ast_while *)ast;
-        //      struct ast_while *w = (struct ast_while *)ast;
-                int status = 0;
-                while (1)
-                {
-            printf("DEBUG: while condition returned %d\n", status);
-                        status = exec_ast(w->condition);
-                        if (status != 0)
-                                break;
-                        status = exec_ast(w->body);
-            printf("DEBUG: while body returned %d\n", status);
-                }
-                return status;
-}*/
-static int exec_while(struct ast *ast)
-{
-    if (!ast)
-        return 0;
-    struct ast_while *w = (struct ast_while *)ast;
-    if (!w || !w->condition || !w->body)
-        return 0;
-
-    int cond_status = 0;
-    int body_status = 0;
-
-    while (1)
-    {
-        cond_status = exec_ast(w->condition); // Évalue la condition
-        if (cond_status != 0) // Si condition échoue, break
-            break;
-        body_status = exec_ast(w->body); // Évalue le corps
-    }
-    return body_status; // Retourner le dernier code de retour du corps
-}
 
 static int exec_until(struct ast *ast)
 {
-    struct ast_until *u = (struct ast_until *)ast;
-    int cond_status = 0;
-    int body_status = 0;
+        struct ast_until *u = (struct ast_until *)ast;
+                int status = 0;
+                while (1)
+                {
+                        status = exec_ast(u->condition);
+                        if (status == 0)
+                                break;
+                        status = exec_ast(u->body);
+                        if(status == EXEC_BREAK)
+                        {
+                                status = 0;
+                                break;
+                        }
+                        if(status == EXEC_CONTINUE)
+                        {
+                                status = 0;
+                                continue;
+                        }
+                }
+                return status;
+}
+
+static int exec_while(struct ast *ast)
+{
+    struct ast_while *w = (struct ast_while *)ast;
+    int status = 0;
 
     while (1)
     {
-        cond_status = exec_ast(u->condition);
-        if (cond_status == 0) // until s'arrête quand condition réussit
+        status = exec_ast(w->condition);
+        if (status != 0)
             break;
-        body_status = exec_ast(u->body);
-    }
-    return body_status;
-}
-
-static int exec_for(struct ast *ast)
-{
-    struct ast_for *f = (struct ast_for *)ast;
-    int status = 0;
-    if (!f->words)
-    {
-        status = exec_ast(f->body);
-        return status;
-    }
-    for (size_t i = 0; f->words[i] != NULL; i++)
-    {
-        if (g_parser)
+        status = exec_ast(w->body);
+        if(status == EXEC_BREAK)
         {
-            add_var(g_parser, f->var, f->words[i]);
-            /* struct variable *v = g_parser->var;
-                 while (v)
-                 {
-                     printf("  - %s=%s\n", v->nom, v->value);
-                     v = v->next;
-                 }*/
+                status = 0;
+                break;
         }
-
-        status = exec_ast(f->body);
+        if(status == EXEC_CONTINUE)
+        {
+                status = 0;
+                continue;
+        }
     }
 
     return status;
 }
-/*static int exec_for(struct ast *ast, struct parser *parser)
+
+
+
+static struct variable *get_var(struct parser *parser, const char *name)
 {
-    struct ast_for *f = (struct ast_for *)ast;
-    int status = 0;
+    struct variable *cur = parser->var;
 
-    if (!f->words)
-        return 0;
-
-    for (size_t i = 0; f->words[i] != NULL; i++)
+    while (cur)
     {
-        // Assigner la variable pour cette itération
-    if (g_parser)
-            add_var(g_parser, f->var, f->words[i]);*/
-/* if (parser)
-     add_var(parser, f->var, f->words[i]);
-
- status = exec_ast(f->body);
+        if (strcmp(cur->nom, name) == 0)
+            return cur;
+        cur = cur->next;
+    }
+    return NULL;
 }
 
-return status;
-}*/
+
+static char *save_before_value(struct parser *parser,const char *name, int *defined)
+{
+    struct variable *var = get_var(parser, name);
+    if (var && var->value)
+    {
+        *defined = 1;
+        return strdup(var->value);
+    }
+    *defined = 0;
+    return NULL;
+}
+
+
+static void restore_before(struct parser *parser,const char *name, char *before_value,int defined)
+{
+    struct variable *cur = parser->var;
+    struct variable *prev = NULL;
+    if (defined && before_value)
+    {
+        add_var(parser, (char *)name, before_value);
+        free(before_value);
+        return;
+    }
+    while (cur)
+    {
+        if (strcmp(cur->nom, name) == 0)
+        {
+            if (prev)
+            {
+                prev->next = cur->next;
+            }
+            else
+            {
+                parser->var = cur->next;
+            }
+            free(cur->nom);
+            free(cur->value);
+            free(cur);
+            return;
+        }
+        prev = cur;
+        cur = cur->next;
+    }
+}
+
+static void update(struct parser *parser, const char *name, const char *value)
+{
+    add_var(parser, (char *)name, (char *)value);
+    struct variable *var = get_var(parser, name);
+    if (var)
+    {
+        var->exported = 0;
+    }
+}
+
+
+static int exec_for(struct ast *ast)
+{
+    struct ast_for *res = (struct ast_for *)ast;
+    int status = 0;
+    char *before_value = NULL;
+    int defined = 0;
+    if (g_parser)
+    {
+        before_value = save_before_value(g_parser,res->var,&defined);
+    }
+    if (!res->words)
+    {
+        status = exec_ast(res->body);
+    }
+    else
+    {
+        for (size_t i = 0; res->words[i]; i++)
+        {
+            if (g_parser)
+            {
+                update(g_parser,res->var,res->words[i]);
+            }
+            status = exec_ast(res->body);
+            if(status == EXEC_BREAK)
+            {
+                    status = 0;
+                    break;
+            }
+            if(status == EXEC_CONTINUE)
+            {
+                    status = 0;
+                    continue;
+            }
+        }
+    }
+
+    if (g_parser)
+    {
+        restore_before(g_parser,res->var,before_value,defined);
+    }
+    return status;
+}
 
 static int exec_and(struct ast *ast)
 {
