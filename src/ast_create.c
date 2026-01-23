@@ -97,6 +97,28 @@ struct ast *create_until(struct ast *cond, struct ast *body)
     return (struct ast *)un;
 }
 
+struct ast *create_break(void)
+{
+        struct ast *b = malloc(sizeof(struct ast));
+        if(!b)
+        {
+                return NULL;
+        }
+        b->type = AST_BREAK;
+        return b;
+}
+
+struct ast *create_continue(void)
+{
+        struct ast *c = malloc(sizeof(struct ast));
+        if(!c)
+        {
+                return NULL;
+        }
+        c->type = AST_CONTINUE;
+        return c;
+}
+
 struct ast *create_for(char *var, char **words, struct ast *body)
 {
     struct ast_for *fo = malloc(sizeof(*fo));
@@ -234,7 +256,61 @@ static void free_subshell(struct ast *ast)
     ast_free(s->body);
 }
 
+
+static void ast_free_by_type(struct ast *ast)
+{
+    switch (ast->type)
+    {
+    case AST_COMMAND:
+        free_cmd(ast);
+        break;
+    case AST_WHILE:
+        free_while_until(ast, 1);
+        break;
+    case AST_UNTIL:
+        free_while_until(ast, 0);
+        break;
+    case AST_BREAK:
+    case AST_CONTINUE:
+        break;
+    case AST_FOR:
+        free_for(ast);
+        break;
+    case AST_LIST:
+        free_list(ast);
+        break;
+    case AST_IF:
+        free_if(ast);
+        break;
+    case AST_PIPELINE:
+        free_pipeline(ast);
+        break;
+    case AST_NEGATION:
+        free_negation(ast);
+        break;
+    case AST_AND:
+    case AST_OR:
+        free_and_or(ast);
+        break;
+    case AST_REDIRECTION:
+        free_redirection(ast);
+        break;
+    case AST_SUBSHELL:
+        free_subshell(ast);
+        break;
+    }
+}
+
 void ast_free(struct ast *ast)
+{
+    if (!ast)
+        return;
+
+    ast_free_by_type(ast);
+    free(ast);
+}
+
+/*void ast_free(struct ast *ast)
 {
     if (!ast)
         return;
@@ -252,6 +328,11 @@ void ast_free(struct ast *ast)
     case AST_UNTIL: {
         free_while_until(ast, 0);
         break;
+    }
+    case AST_BREAK:
+    case AST_CONTINUE:
+    {
+            break;
     }
     case AST_FOR: {
         free_for(ast);
@@ -294,4 +375,4 @@ void ast_free(struct ast *ast)
     }
     }
     free(ast);
-}
+}*/

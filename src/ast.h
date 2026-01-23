@@ -9,6 +9,8 @@ enum ast_type
     AST_WHILE,
     AST_UNTIL,
     AST_FOR,
+    AST_BREAK,
+    AST_CONTINUE,
     AST_NEGATION,
     AST_AND,
     AST_OR,
@@ -16,6 +18,16 @@ enum ast_type
     AST_REDIRECTION,
     AST_SUBSHELL
 };
+
+
+
+enum exec_status
+{
+    EXEC_SUCCESS = 0,
+    EXEC_BREAK,
+    EXEC_CONTINUE
+};
+
 enum redir_type
 {
     AST_REDIR_OUT,
@@ -124,6 +136,8 @@ struct ast *create_while(struct ast *cond, struct ast *body);
 struct ast *create_until(struct ast *cond, struct ast *body);
 struct ast *create_for(char *var, char **words, struct ast *body);
 struct ast *create_subshell(struct ast *body);
+struct ast *create_break(void);
+struct ast *create_continue(void);
 void ast_free(struct ast *ast);
 
 #endif /* AST_H */

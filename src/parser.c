@@ -218,10 +218,7 @@ static int add_words(struct parser *parser, char ***words, size_t *count,
             return 0;
         *words = tmp;
     }
-
-    // NE PAS expandre ici ! Stocker le mot tel quel
-    (*words)[*count] = strdup(parser->curr_tok->val); // CHANGEMENT ICI
-
+    (*words)[*count] = strdup(parser->curr_tok->val);
     if (!(*words)[*count])
         return 0;
 
@@ -288,7 +285,7 @@ error:
     return NULL;
 }
 
-struct ast *parse_pipeline(struct parser *parser)
+/*struct ast *parse_pipeline(struct parser *parser)
 {
     int negated = 0;
 
@@ -348,6 +345,101 @@ error:
         ast_free(cmds[i]);
     free(cmds);
     return NULL;
+}*/
+
+
+static int parse_pipeline_neg(struct parser *parser)
+{
+    if (parser->curr_tok && parser->curr_tok->type == TOK_NOT)
+    {
+        parser_consume(parser);
+        return 1;
+    }
+    return 0;
+}
+
+static struct ast **init_pipeline_cmds(size_t *capacity, size_t *count)
+{
+    *capacity = 4;
+    *count = 0;
+    struct ast **cmds = malloc(sizeof(*cmds) * (*capacity));
+    if (!cmds)
+    {
+        return NULL;
+    }
+    return cmds;
+}
+
+static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds, size_t *count, size_t *capacity)
+{
+    struct ast *cmd = parse_command(parser);
+    if (!cmd)
+    {
+        return 0;
+    }
+    (*cmds)[(*count)++] = cmd;
+    while (parser->curr_tok && parser->curr_tok->type == TOK_PIPE)
+    {
+        parser_consume(parser);
+        cmd = parse_command(parser);
+        if (!cmd)
+        {
+            return 0;
+        }
+        if (*count == *capacity)
+        {
+            *capacity *= 2;
+            struct ast **tmp = realloc(*cmds, sizeof(**cmds) * (*capacity));
+            if (!tmp)
+            {
+                return 0;
+            }
+            *cmds = tmp;
+        }
+        (*cmds)[(*count)++] = cmd;
+    }
+    return 1;
+}
+
+static struct ast *build_pipeline(struct ast **cmds, size_t count, int neg)
+{
+    struct ast *result;
+    if (count == 1)
+    {
+        result = cmds[0];
+        free(cmds);
+    }
+    else
+    {
+        result = ast_pipeline_create(cmds, count);
+    }
+    if (neg)
+    {
+        result = create_negation(result);
+    }
+    return result;
+}
+
+struct ast *parse_pipeline(struct parser *parser)
+{
+    int neg = parse_pipeline_neg(parser);
+    size_t capacity;
+    size_t count;
+    struct ast **cmds = init_pipeline_cmds(&capacity, &count);
+    if (!cmds)
+    {
+        return NULL;
+    }
+    if (!parse_pipeline_cmds(parser, &cmds, &count, &capacity))
+    {
+        goto error;
+    }
+    return build_pipeline(cmds, count, neg);
+error:
+    for (size_t i = 0; i < count; i++)
+        ast_free(cmds[i]);
+    free(cmds);
+    return NULL;
 }
 
 struct ast *parse_and_or(struct parser *parser)
@@ -399,7 +491,7 @@ static int add_ast(struct ast ***cmds, size_t *count, size_t *cap,
     return 1;
 }
 
-struct ast *parse_compound_list(struct parser *parser)
+/*struct ast *parse_compound_list(struct parser *parser)
 {
     while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
     {
@@ -450,7 +542,91 @@ error:
         ast_free(cmds[i]);
     free(cmds);
     return NULL;
+}*/
+
+static void skip_newlines(struct parser *parser)
+{
+    while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+    {
+        parser_consume(parser);
+    }
 }
+
+
+static struct ast **init_cmds(struct ast *first, size_t *cap, size_t *count)
+{
+    *cap = 4;
+    *count = 1;
+    struct ast **cmds = malloc(sizeof(*cmds) * (*cap));
+    if (!cmds)
+    {
+        return NULL;
+    }
+    cmds[0] = first;
+    return cmds;
+}
+
+static int parse_compound_sql(struct parser *parser, struct ast ***cmds, size_t *count,size_t *cap)
+{
+    while (parser->curr_tok && (parser->curr_tok->type == TOK_SEMI || parser->curr_tok->type == TOK_NEWLINE))
+    {
+        parser_consume(parser);
+        while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+        {
+            parser_consume(parser);
+        }
+        if (!parser->curr_tok || is_list_end(parser->curr_tok->type))
+        {
+            break;
+        }
+        struct ast *next = parse_and_or(parser);
+        if (!next)
+        {
+            break;
+        }
+        if (!add_ast(cmds, count, cap, next))
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+struct ast *parse_compound_list(struct parser *parser)
+{
+    skip_newlines(parser);
+    struct ast *first = parse_and_or(parser);
+    if (!first)
+    {
+        return NULL;
+    }
+    size_t cap;
+    size_t count;
+    struct ast **cmds = init_cmds(first, &cap, &count);
+    if (!cmds)
+    {
+        ast_free(first);
+        return NULL;
+    }
+
+    if (!parse_compound_sql(parser, &cmds, &count, &cap))
+    {
+        goto error;
+    }
+    if (count == 1)
+    {
+        free(cmds);
+        return first;
+    }
+    return create_list(cmds, count);
+
+error:
+    for (size_t i = 0; i < count; i++)
+        ast_free(cmds[i]);
+    free(cmds);
+    return NULL;
+}
+
 
 static struct ast *parse_else(struct parser *parser)
 {
@@ -603,7 +779,7 @@ struct ast *parse_rule_until(struct parser *parser)
     parser_consume(parser);
     return create_until(condition, body);
 }
-struct ast *parse_rule_for(struct parser *parser)
+/*struct ast *parse_rule_for(struct parser *parser)
 {
     if (!parser || !parser->curr_tok || parser->curr_tok->type != TOK_FOR)
     {
@@ -743,7 +919,121 @@ struct ast *parse_rule_for(struct parser *parser)
     parser_consume(parser);
 
     return create_for(var, words, body);
+}*/
+
+
+static void free_for_parts(char *var, char **words)
+{
+    if (var)
+    {
+        free(var);
+    }
+    if (words)
+    {
+        for (size_t i = 0; words[i]; i++)
+        {
+            free(words[i]);
+        }
+        free(words);
+    }
 }
+
+static char *parse_for_var(struct parser *parser)
+{
+    if (!parser->curr_tok || parser->curr_tok->type != TOK_WORD)
+    {
+        return NULL;
+    }
+    char *var = strdup(parser->curr_tok->val);
+    parser_consume(parser);
+    return var;
+}
+
+static char **parse_for_words(struct parser *parser)
+{
+    if (!parser->curr_tok || parser->curr_tok->type != TOK_IN)
+    {
+        return NULL;
+    }
+    parser_consume(parser);
+    size_t cap = 8;
+    size_t count = 0;
+    char **words = malloc(sizeof(char *) * cap);
+    while (parser->curr_tok && parser->curr_tok->type == TOK_WORD)
+    {
+        if (count + 1 >= cap)
+        {
+            cap *= 2;
+            words = realloc(words, sizeof(char *) * cap);
+        }
+        words[count++] = strdup(parser->curr_tok->val);
+        parser_consume(parser);
+    }
+    words[count] = NULL;
+    return words;
+}
+
+
+static int skip_semi_newline(struct parser *parser)
+{
+    if (!parser->curr_tok || (parser->curr_tok->type != TOK_SEMI && parser->curr_tok->type != TOK_NEWLINE))
+    {
+        return 0;
+    }
+    while (parser->curr_tok && (parser->curr_tok->type == TOK_SEMI || parser->curr_tok->type == TOK_NEWLINE))
+    {
+        parser_consume(parser);
+    }
+    return 1;
+}
+
+
+static struct ast *parse_for_body(struct parser *parser)
+{
+    if (!parser->curr_tok || parser->curr_tok->type != TOK_DO)
+    {
+        return NULL;
+    }
+    parser_consume(parser);
+    struct ast *body = parse_compound_list(parser);
+    if (!body || !parser->curr_tok || parser->curr_tok->type != TOK_DONE)
+    {
+        ast_free(body);
+        return NULL;
+    }
+    parser_consume(parser);
+    return body;
+}
+
+
+struct ast *parse_rule_for(struct parser *parser)
+{
+    parser_consume(parser);
+    char *var = parse_for_var(parser);
+    if (!var)
+    {
+        return NULL;
+    }
+    char **words = NULL;
+    if (parser->curr_tok && parser->curr_tok->type == TOK_IN)
+    {
+        words = parse_for_words(parser);
+    }
+    if (!skip_semi_newline(parser))
+    {
+        free_for_parts(var, words);
+        return NULL;
+    }
+    struct ast *body = parse_for_body(parser);
+    if (!body)
+    {
+        free_for_parts(var, words);
+        return NULL;
+    }
+    return create_for(var, words, body);
+}
+
+
 static struct ast *parse_paren(struct parser *parser)
 {
     struct ast *body;
@@ -811,20 +1101,47 @@ static struct ast *parse_command(struct parser *parser)
     {
         return parse_subshell(parser);
     }
-
     if (parser->curr_tok->type == TOK_IF)
-        return parse_rule_if(parser);
+	    return parse_rule_if(parser);
     if (parser->curr_tok->type == TOK_WHILE)
     {
-        return parse_rule_while(parser);
+        struct ast *res = parse_rule_while(parser);
+        if(!res)
+        {
+                fprintf(stderr, "syntax error\n");
+                return create_cmd(NULL);
+        }
+        return res;
+    }
+    if(parser->curr_tok->type == TOK_BREAK)
+    {
+            parser_consume(parser);
+            return create_break();
+    }
+    if(parser->curr_tok->type == TOK_CONTINUE)
+    {
+            parser_consume(parser);
+            return create_continue();
     }
     if (parser->curr_tok->type == TOK_UNTIL)
     {
-        return parse_rule_until(parser);
+        struct ast *res = parse_rule_until(parser);
+        if(!res)
+        {
+                fprintf(stderr, "syntax error\n");
+                return create_cmd(NULL);
+        }
+        return res;
     }
     if (parser->curr_tok->type == TOK_FOR)
     {
-        return parse_rule_for(parser);
+        struct ast *res = parse_rule_for(parser);
+        if (!res)
+        {
+                fprintf(stderr, "syntax error\n");
+                return create_cmd(NULL);
+        }
+        return res;
     }
     struct ast *left_cmd = NULL;
     left_cmd = parse_simple_command(parser);

@@ -121,12 +121,12 @@ static char *get_name_brace(const char *word, size_t *i)
 static const char *find_var(const char *name, struct variable *var)
 {
     struct variable *actuel = var;
-    while (actuel)
+    /*while (actuel)
     {
         actuel = actuel->next;
     }
     
-    actuel = var; 
+    actuel = var; */
     while (actuel)
     {
         if (actuel->nom && strcmp(actuel->nom, name) == 0)

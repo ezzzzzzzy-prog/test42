@@ -16,6 +16,8 @@ enum type
     TOK_FOR,
     TOK_WHILE,
     TOK_UNTIL,
+    TOK_BREAK,
+    TOK_CONTINUE,
     TOK_DO,
     TOK_DONE,
     TOK_IN,

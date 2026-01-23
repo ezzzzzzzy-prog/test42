@@ -10,6 +10,7 @@ struct variable
         char *nom;
         char *value;
         struct variable *next;
+	int exported;
 };
 
 struct parser
