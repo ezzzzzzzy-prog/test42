@@ -1,13 +1,14 @@
 #include "special.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 struct special *create_special(char **args, int argc_count)
 {
     struct special *spe = malloc(sizeof(struct special));
-    if(!spe)
+    if (!spe)
     {
-            return NULL;
+        return NULL;
     }
     spe->exit_code = 0;
     spe->shell_pid = getpid();
@@ -19,14 +20,13 @@ struct special *create_special(char **args, int argc_count)
     return spe;
 }
 
-
 void free_special(struct special *spe)
 {
-        if(!spe)
-        {
-                return;
-        }
-        free(spe->pwd);
-        free(spe->oldpwd);
-        free(spe);
+    if (!spe)
+    {
+        return;
+    }
+    free(spe->pwd);
+    free(spe->oldpwd);
+    free(spe);
 }

@@ -163,7 +163,8 @@ static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
 }
 
 
-static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd, int pipefd[2])
+static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd, int
+pipefd[2])
 {
         if (prev_fd != -1)
             {
@@ -197,9 +198,7 @@ static int exec_pipeline_simple(struct ast_pipeline *p)
     return -1;
 }
 
-
-static int exec_pipeline_fork(struct ast_pipeline *p,
-                              pid_t *pids)
+static int exec_pipeline_fork(struct ast_pipeline *p, pid_t *pids)
 {
     int prev_fd = -1;
     int pipefd[2];
@@ -226,7 +225,7 @@ static int exec_pipeline_fork(struct ast_pipeline *p,
         pids[i] = pid;
         if (prev_fd != -1)
         {
-                close(prev_fd);
+            close(prev_fd);
         }
         if (i + 1 < p->count)
         {
@@ -236,7 +235,6 @@ static int exec_pipeline_fork(struct ast_pipeline *p,
     }
     return 1;
 }
-
 
 static int exec_pipeline_wait(pid_t *pids, size_t count)
 {
@@ -306,29 +304,28 @@ static int exec_if(struct ast *ast)
     return cond;
 }
 
-
 static int exec_until(struct ast *ast)
 {
-        struct ast_until *u = (struct ast_until *)ast;
-                int status = 0;
-                while (1)
-                {
-                        status = exec_ast(u->condition);
-                        if (status == 0)
-                                break;
-                        status = exec_ast(u->body);
-                        if(status == EXEC_BREAK)
-                        {
-                                status = 0;
-                                break;
-                        }
-                        if(status == EXEC_CONTINUE)
-                        {
-                                status = 0;
-                                continue;
-                        }
-                }
-                return status;
+    struct ast_until *u = (struct ast_until *)ast;
+    int status = 0;
+    while (1)
+    {
+        status = exec_ast(u->condition);
+        if (status == 0)
+            break;
+        status = exec_ast(u->body);
+        if (status == EXEC_BREAK)
+        {
+            status = 0;
+            break;
+        }
+        if (status == EXEC_CONTINUE)
+        {
+            status = 0;
+            continue;
+        }
+    }
+    return status;
 }
 
 static int exec_while(struct ast *ast)
@@ -342,22 +339,20 @@ static int exec_while(struct ast *ast)
         if (status != 0)
             break;
         status = exec_ast(w->body);
-        if(status == EXEC_BREAK)
+        if (status == EXEC_BREAK)
         {
-                status = 0;
-                break;
+            status = 0;
+            break;
         }
-        if(status == EXEC_CONTINUE)
+        if (status == EXEC_CONTINUE)
         {
-                status = 0;
-                continue;
+            status = 0;
+            continue;
         }
     }
 
     return status;
 }
-
-
 
 static struct variable *get_var(struct parser *parser, const char *name)
 {
@@ -372,8 +367,8 @@ static struct variable *get_var(struct parser *parser, const char *name)
     return NULL;
 }
 
-
-static char *save_before_value(struct parser *parser,const char *name, int *defined)
+static char *save_before_value(struct parser *parser, const char *name,
+                               int *defined)
 {
     struct variable *var = get_var(parser, name);
     if (var && var->value)
@@ -385,8 +380,8 @@ static char *save_before_value(struct parser *parser,const char *name, int *defi
     return NULL;
 }
 
-
-static void restore_before(struct parser *parser,const char *name, char *before_value,int defined)
+static void restore_before(struct parser *parser, const char *name,
+                           char *before_value, int defined)
 {
     struct variable *cur = parser->var;
     struct variable *prev = NULL;
@@ -428,7 +423,6 @@ static void update(struct parser *parser, const char *name, const char *value)
     }
 }
 
-
 static int exec_for(struct ast *ast)
 {
     struct ast_for *res = (struct ast_for *)ast;
@@ -437,7 +431,7 @@ static int exec_for(struct ast *ast)
     int defined = 0;
     if (g_parser)
     {
-        before_value = save_before_value(g_parser,res->var,&defined);
+        before_value = save_before_value(g_parser, res->var, &defined);
     }
     if (!res->words)
     {
@@ -449,25 +443,25 @@ static int exec_for(struct ast *ast)
         {
             if (g_parser)
             {
-                update(g_parser,res->var,res->words[i]);
+                update(g_parser, res->var, res->words[i]);
             }
             status = exec_ast(res->body);
-            if(status == EXEC_BREAK)
+            if (status == EXEC_BREAK)
             {
-                    status = 0;
-                    break;
+                status = 0;
+                break;
             }
-            if(status == EXEC_CONTINUE)
+            if (status == EXEC_CONTINUE)
             {
-                    status = 0;
-                    continue;
+                status = 0;
+                continue;
             }
         }
     }
 
     if (g_parser)
     {
-        restore_before(g_parser,res->var,before_value,defined);
+        restore_before(g_parser, res->var, before_value, defined);
     }
     return status;
 }

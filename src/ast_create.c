@@ -99,24 +99,24 @@ struct ast *create_until(struct ast *cond, struct ast *body)
 
 struct ast *create_break(void)
 {
-        struct ast *b = malloc(sizeof(struct ast));
-        if(!b)
-        {
-                return NULL;
-        }
-        b->type = AST_BREAK;
-        return b;
+    struct ast *b = malloc(sizeof(struct ast));
+    if (!b)
+    {
+        return NULL;
+    }
+    b->type = AST_BREAK;
+    return b;
 }
 
 struct ast *create_continue(void)
 {
-        struct ast *c = malloc(sizeof(struct ast));
-        if(!c)
-        {
-                return NULL;
-        }
-        c->type = AST_CONTINUE;
-        return c;
+    struct ast *c = malloc(sizeof(struct ast));
+    if (!c)
+    {
+        return NULL;
+    }
+    c->type = AST_CONTINUE;
+    return c;
 }
 
 struct ast *create_for(char *var, char **words, struct ast *body)
@@ -255,7 +255,6 @@ static void free_subshell(struct ast *ast)
     struct ast_subshell *s = (struct ast_subshell *)ast;
     ast_free(s->body);
 }
-
 
 static void ast_free_by_type(struct ast *ast)
 {

@@ -347,7 +347,6 @@ error:
     return NULL;
 }*/
 
-
 static int parse_pipeline_neg(struct parser *parser)
 {
     if (parser->curr_tok && parser->curr_tok->type == TOK_NOT)
@@ -370,7 +369,8 @@ static struct ast **init_pipeline_cmds(size_t *capacity, size_t *count)
     return cmds;
 }
 
-static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds, size_t *count, size_t *capacity)
+static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
+                               size_t *count, size_t *capacity)
 {
     struct ast *cmd = parse_command(parser);
     if (!cmd)
@@ -552,7 +552,6 @@ static void skip_newlines(struct parser *parser)
     }
 }
 
-
 static struct ast **init_cmds(struct ast *first, size_t *cap, size_t *count)
 {
     *cap = 4;
@@ -566,9 +565,12 @@ static struct ast **init_cmds(struct ast *first, size_t *cap, size_t *count)
     return cmds;
 }
 
-static int parse_compound_sql(struct parser *parser, struct ast ***cmds, size_t *count,size_t *cap)
+static int parse_compound_sql(struct parser *parser, struct ast ***cmds,
+                              size_t *count, size_t *cap)
 {
-    while (parser->curr_tok && (parser->curr_tok->type == TOK_SEMI || parser->curr_tok->type == TOK_NEWLINE))
+    while (parser->curr_tok
+           && (parser->curr_tok->type == TOK_SEMI
+               || parser->curr_tok->type == TOK_NEWLINE))
     {
         parser_consume(parser);
         while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
@@ -626,7 +628,6 @@ error:
     free(cmds);
     return NULL;
 }
-
 
 static struct ast *parse_else(struct parser *parser)
 {
@@ -921,7 +922,6 @@ struct ast *parse_rule_until(struct parser *parser)
     return create_for(var, words, body);
 }*/
 
-
 static void free_for_parts(char *var, char **words)
 {
     if (var)
@@ -973,20 +973,22 @@ static char **parse_for_words(struct parser *parser)
     return words;
 }
 
-
 static int skip_semi_newline(struct parser *parser)
 {
-    if (!parser->curr_tok || (parser->curr_tok->type != TOK_SEMI && parser->curr_tok->type != TOK_NEWLINE))
+    if (!parser->curr_tok
+        || (parser->curr_tok->type != TOK_SEMI
+            && parser->curr_tok->type != TOK_NEWLINE))
     {
         return 0;
     }
-    while (parser->curr_tok && (parser->curr_tok->type == TOK_SEMI || parser->curr_tok->type == TOK_NEWLINE))
+    while (parser->curr_tok
+           && (parser->curr_tok->type == TOK_SEMI
+               || parser->curr_tok->type == TOK_NEWLINE))
     {
         parser_consume(parser);
     }
     return 1;
 }
-
 
 static struct ast *parse_for_body(struct parser *parser)
 {
@@ -1004,7 +1006,6 @@ static struct ast *parse_for_body(struct parser *parser)
     parser_consume(parser);
     return body;
 }
-
 
 struct ast *parse_rule_for(struct parser *parser)
 {
@@ -1032,7 +1033,6 @@ struct ast *parse_rule_for(struct parser *parser)
     }
     return create_for(var, words, body);
 }
-
 
 static struct ast *parse_paren(struct parser *parser)
 {
@@ -1088,48 +1088,46 @@ static struct ast *parse_subshell(struct parser *parser)
     return NULL;
 }
 
-
-
 static struct ast *parse_command(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
     {
         return NULL;
     }
-    if (parser->curr_tok->type == TOK_SUB_LP ||
-        parser->curr_tok->type == TOK_SUB_LB)
+    if (parser->curr_tok->type == TOK_SUB_LP
+        || parser->curr_tok->type == TOK_SUB_LB)
     {
         return parse_subshell(parser);
     }
     if (parser->curr_tok->type == TOK_IF)
-	    return parse_rule_if(parser);
+        return parse_rule_if(parser);
     if (parser->curr_tok->type == TOK_WHILE)
     {
         struct ast *res = parse_rule_while(parser);
-        if(!res)
+        if (!res)
         {
-                fprintf(stderr, "syntax error\n");
-                return create_cmd(NULL);
+            fprintf(stderr, "syntax error\n");
+            return create_cmd(NULL);
         }
         return res;
     }
-    if(parser->curr_tok->type == TOK_BREAK)
+    if (parser->curr_tok->type == TOK_BREAK)
     {
-            parser_consume(parser);
-            return create_break();
+        parser_consume(parser);
+        return create_break();
     }
-    if(parser->curr_tok->type == TOK_CONTINUE)
+    if (parser->curr_tok->type == TOK_CONTINUE)
     {
-            parser_consume(parser);
-            return create_continue();
+        parser_consume(parser);
+        return create_continue();
     }
     if (parser->curr_tok->type == TOK_UNTIL)
     {
         struct ast *res = parse_rule_until(parser);
-        if(!res)
+        if (!res)
         {
-                fprintf(stderr, "syntax error\n");
-                return create_cmd(NULL);
+            fprintf(stderr, "syntax error\n");
+            return create_cmd(NULL);
         }
         return res;
     }
@@ -1138,8 +1136,8 @@ static struct ast *parse_command(struct parser *parser)
         struct ast *res = parse_rule_for(parser);
         if (!res)
         {
-                fprintf(stderr, "syntax error\n");
-                return create_cmd(NULL);
+            fprintf(stderr, "syntax error\n");
+            return create_cmd(NULL);
         }
         return res;
     }

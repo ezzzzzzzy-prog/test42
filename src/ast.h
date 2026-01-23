@@ -19,8 +19,6 @@ enum ast_type
     AST_SUBSHELL
 };
 
-
-
 enum exec_status
 {
     EXEC_SUCCESS = 0,
@@ -41,7 +39,7 @@ enum redir_type
 
 struct ast
 {
-	enum ast_type type;
+    enum ast_type type;
 };
 
 struct ast_redirection
@@ -52,27 +50,27 @@ struct ast_redirection
     char *file;
     int redir_nb;
 };
-    
-struct  ast_while
+
+struct ast_while
 {
-	struct ast base;
-	struct ast *condition;
-	struct ast *body;
+    struct ast base;
+    struct ast *condition;
+    struct ast *body;
 };
 
 struct ast_until
 {
-	struct ast base;
-	struct ast *condition;
-	struct ast *body;
+    struct ast base;
+    struct ast *condition;
+    struct ast *body;
 };
 
 struct ast_for
 {
-	struct ast base;
-	char *var;
-	char **words;
-	struct ast *body;
+    struct ast base;
+    char *var;
+    char **words;
+    struct ast *body;
 };
 
 struct ast_and_or
@@ -91,24 +89,24 @@ struct ast_pipeline
 
 struct ast_cmd
 {
-	struct ast base;
-	char **words;
+    struct ast base;
+    char **words;
 };
 
 struct ast_list
 {
-	struct ast base;
-	struct ast **commands;
-	size_t count;
-	char *sep;
+    struct ast base;
+    struct ast **commands;
+    size_t count;
+    char *sep;
 };
 
 struct ast_if
 {
-	struct ast base;
-	struct ast *condition;
-	struct ast *then_body;
-	struct ast *else_body;
+    struct ast base;
+    struct ast *condition;
+    struct ast *then_body;
+    struct ast *else_body;
 };
 
 struct ast_negation
@@ -124,14 +122,14 @@ struct ast_subshell
 
 struct ast *create_cmd(char **words);
 struct ast *create_list(struct ast **cmds, size_t count);
-struct ast *create_if(struct ast *cond,
-                      struct ast *then_body,
+struct ast *create_if(struct ast *cond, struct ast *then_body,
                       struct ast *else_body);
 struct ast *ast_pipeline_create(struct ast **cmds, size_t count);
 struct ast *create_negation(struct ast *child);
 struct ast *create_and(struct ast *left, struct ast *right);
 struct ast *create_or(struct ast *left, struct ast *right);
-struct ast *create_redir(enum redir_type type, struct ast *left, char *file, int file_desc);
+struct ast *create_redir(enum redir_type type, struct ast *left, char *file,
+                         int file_desc);
 struct ast *create_while(struct ast *cond, struct ast *body);
 struct ast *create_until(struct ast *cond, struct ast *body);
 struct ast *create_for(char *var, char **words, struct ast *body);

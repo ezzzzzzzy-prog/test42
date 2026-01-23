@@ -1,8 +1,9 @@
 #define _POSIX_C_SOURCE 200809L
 #include "io_backend.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 static FILE *f = NULL;
 int io_backend_init(int argc, char **argv)
@@ -37,12 +38,12 @@ int io_backend_init(int argc, char **argv)
 
 int io_backend_next(void)
 {
-	if(!f)
-	{
-		return EOF;
-	}
-	int res = fgetc(f);
-	return res;
+    if (!f)
+    {
+        return EOF;
+    }
+    int res = fgetc(f);
+    return res;
 }
 
 int io_backend_peek(void)
@@ -58,10 +59,9 @@ int io_backend_peek(void)
 
 void io_backend_close(void)
 {
-	if(f && f != stdin)
-	{
-		fclose(f);
-	}
-	f = NULL;
+    if (f && f != stdin)
+    {
+        fclose(f);
+    }
+    f = NULL;
 }
-

@@ -1,12 +1,12 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
+#include "ast.h"
+#include "exec.h"
 #include "io_backend.h"
 #include "parser.h"
-#include "exec.h"
-#include "ast.h"
-#include <unistd.h>
-#include <sys/wait.h>
 
 /*int main(int argc, char **argv)
 {
@@ -24,17 +24,17 @@
     if (!ast)
     {
         int status = 0;
-        free_special(parser->spe); 
+        free_special(parser->spe);
         parser_free(parser);
         io_backend_close();
         return status;
     }
-    
+
     exec_set_parser(parser);
     int status = exec_ast(ast);
-    
+
     ast_free(ast);
-    free_special(parser->spe); 
+    free_special(parser->spe);
     parser_free(parser);
     io_backend_close();
     return status;
@@ -71,10 +71,9 @@ int main(int argc, char **argv)
 
     free_special(parser->spe);
     parser_free(parser);
-    //io_backend_close();
-    if(parser->exit)
+    // io_backend_close();
+    if (parser->exit)
         _exit(parser->ex_code);
     io_backend_close();
     return status;
 }
-

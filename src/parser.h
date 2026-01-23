@@ -7,10 +7,10 @@
 
 struct variable
 {
-        char *nom;
-        char *value;
-        struct variable *next;
-	int exported;
+    char *nom;
+    char *value;
+    struct variable *next;
+    int exported;
 };
 
 struct parser
@@ -27,7 +27,7 @@ struct parser *new_parse(void);
 
 struct ast *parser_input(struct parser *parser);
 struct ast *parse_rule_if(struct parser *parser);
-struct ast *parse_rule_for(struct parser *parser);    // AJOUT
+struct ast *parse_rule_for(struct parser *parser); // AJOUT
 struct ast *parse_rule_while(struct parser *parser); // AJOUT
 struct ast *parse_rule_until(struct parser *parser); // AJOUT
 void parser_free(struct parser *parser);

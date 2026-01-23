@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "exec.h"
 #include "expansion.h"
 
@@ -27,12 +28,12 @@ int is_builtin(const char *cmd)
         return 1;
     if (strcmp(cmd, "unset") == 0)
         return 1;
-    if(strcmp(cmd, "export")==0)
-            return 1;
-    if(strcmp(cmd, "break") == 0)
-            return 1;
-    if(strcmp(cmd, "continue")==0)
-            return 1;
+    if (strcmp(cmd, "export") == 0)
+        return 1;
+    if (strcmp(cmd, "break") == 0)
+        return 1;
+    if (strcmp(cmd, "continue") == 0)
+        return 1;
     return 0;
 }
 
@@ -63,8 +64,39 @@ static int string_to_int(const char *str)
 
     return result * signe;
 }
-
 static void echo_print(const char *s, int f)
+{
+    //    fprintf(stderr, "[echo_print] f=%d s=\"%s\"\n", f, s);
+
+    for (int i = 0; s[i]; i++)
+    {
+        //      fprintf(stderr, "  [echo] i=%d c='%c' (%d)\n", i, s[i], s[i]);
+
+        if (f && s[i] == '\\' && s[i + 1])
+        {
+            i++;
+            if (s[i] == 'n')
+                putchar('\n');
+            else if (s[i] == 't')
+                putchar('\t');
+            else if (s[i] == '\\')
+                putchar('\\');
+            else if (s[i] == '"')
+                putchar('"');
+            else
+            {
+                putchar('\\');
+                putchar(s[i]);
+            }
+        }
+        else
+        {
+            putchar(s[i]);
+        }
+    }
+}
+
+/*static void echo_print(const char *s, int f)
 {
     for (int i = 0; s[i];)
     {
@@ -77,6 +109,8 @@ static void echo_print(const char *s, int f)
                 putchar('\t');
             else if (s[i] == '\\')
                 putchar('\\');
+            else if (s[i] == '"')
+                putchar('"');
             else
             {
                 putchar('\\');
@@ -91,9 +125,24 @@ static void echo_print(const char *s, int f)
         }
     }
 }
+*/
+
+/*static int dollar_exception(const char *s)
+{
+    for (int i = 0; s[i]; i++)
+    {
+        if (s[i] == '$')
+        {
+            if (i == 0 || s[i - 1] != '\\')
+                return 1;
+        }
+    }
+    return 0;
+}*/
 
 static int builtin_echo(char **argv, struct parser *parser)
 {
+    (void)parser;
     int n_flag = 0;
     int e_flag = 0;
     int idx = 1;
@@ -125,62 +174,19 @@ static int builtin_echo(char **argv, struct parser *parser)
         if (!first)
             putchar(' ');
         first = 0;
-
-        // char *s = argv[idx];
-        // int i = 0;
-        // echo_print(argv[idx], e_flag);
-        /*while (s[i])
-        {
-            if (e_flag && s[i] == '\\' && s[i + 1])
-            {
-                i++;
-                if (s[i] == 'n')
-                    putchar('\n');
-                else if (s[i] == 't')
-                    putchar('\t');
-                else if (s[i] == '\\')
-                    putchar('\\');
-                else
-                {
-                    putchar('\\');
-                    putchar(s[i]);
-                }
-                i++;
-            }
-            else
-            {
-                putchar(s[i]);
-                i++;
-            }
-        }*/
         char *expanded = expand(parser, parser->spe, argv[idx]);
+
         if (expanded)
         {
             echo_print(expanded, e_flag);
             free(expanded);
         }
-        /*else
+        else
         {
             echo_print(argv[idx], e_flag);
-        }*/
-        /*	if (argv[idx][0] == '$')
-                {
-                    const char *varname = argv[idx] + 1;
-                    const char *value = find_var(varname, parser->var);
-                    if (value && *value)
-                    {
-                        printf("%s", value);
-                    }
-                    else
-                    {
-                        // Variable non trouvée, afficher le mot original
-                        echo_print(argv[idx], e_flag);
-                    }
-                }
-                else
-                {
-                    echo_print(argv[idx], e_flag);
-                }*/
+        }
+
+        //        echo_print(argv[idx], e_flag);
         idx++;
     }
 
@@ -190,8 +196,6 @@ static int builtin_echo(char **argv, struct parser *parser)
     fflush(stdout);
     return 0;
 }
-
-
 
 static int builtin_break(char **argv)
 {
@@ -264,41 +268,40 @@ static int builtin_cd(char **argv)
     return 0;
 }
 
-
 static int builtin_export(char **argv, struct parser *parser)
 {
-        if(!argv[1])
-        {
-                return 0;
-        }
-        char *arg = argv[1];
-        char *equal = strchr(arg, '=');
-        char *name;
-        char *value;
-        if(equal)
-        {
-                *equal = '\0';
-                name = arg;
-                value = equal + 1;
-        }
-        else
-        {
-                name = arg;
-                value = "";
-        }
-        add_var(parser, name, value);
-        struct variable *v = parser->var;
-        while(v)
-        {
-                if(strcmp(v->nom,name ) == 0)
-                {
-                        v->exported = 1;
-                        setenv(name, value, 1);
-                        break;
-                }
-                v =v->next;
-        }
+    if (!argv[1])
+    {
         return 0;
+    }
+    char *arg = argv[1];
+    char *equal = strchr(arg, '=');
+    char *name;
+    char *value;
+    if (equal)
+    {
+        *equal = '\0';
+        name = arg;
+        value = equal + 1;
+    }
+    else
+    {
+        name = arg;
+        value = "";
+    }
+    add_var(parser, name, value);
+    struct variable *v = parser->var;
+    while (v)
+    {
+        if (strcmp(v->nom, name) == 0)
+        {
+            v->exported = 1;
+            setenv(name, value, 1);
+            break;
+        }
+        v = v->next;
+    }
+    return 0;
 }
 
 static int parse_unset_flags(char **argv, int *idx, int *v_flag, int *f_flag)
@@ -347,7 +350,7 @@ static int builtin_unset(char **argv, struct parser *parser)
     while (argv[idx])
     {
         const char *name = argv[idx];
-        
+
         if (f_flag)
         {
             if (unset_function(parser, name) != 0)
@@ -358,7 +361,7 @@ static int builtin_unset(char **argv, struct parser *parser)
             if (unset_variable(parser, name) != 0)
                 error_count++;
         }
-        
+
         idx++;
     }
 
@@ -367,6 +370,9 @@ static int builtin_unset(char **argv, struct parser *parser)
 
 int execute_builtin(char **argv, struct parser *parser)
 {
+    //    fprintf(stderr, "\n[EXEC] argv:\n");
+    //  for (int i = 0; argv && argv[i]; i++)
+    //    fprintf(stderr, "  argv[%d]=\"%s\"\n", i, argv[i]);
     if (argv == NULL || argv[0] == NULL)
         return -1;
 
@@ -390,11 +396,11 @@ int execute_builtin(char **argv, struct parser *parser)
     if (strcmp(cmd, "unset") == 0)
         return builtin_unset(argv, parser);
     if (strcmp(cmd, "export") == 0)
-            return builtin_export(argv,parser);
-    if(strcmp(cmd, "break")==0)
-            return builtin_break(argv);
-    if(strcmp(cmd, "continue")==0)
-            return builtin_continue(argv);
+        return builtin_export(argv, parser);
+    if (strcmp(cmd, "break") == 0)
+        return builtin_break(argv);
+    if (strcmp(cmd, "continue") == 0)
+        return builtin_continue(argv);
 
     return -1;
 }
