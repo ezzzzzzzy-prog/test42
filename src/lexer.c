@@ -202,7 +202,6 @@ static struct token *word_tok(char *buf)
         free(buf);
         return new_tok(TOK_IN, NULL);
     }
-    // fprintf(stderr, "[word_tok] \"%s\"\n", buf);
     struct token *tok = new_tok(TOK_WORD, my_strdup(buf));
     free(buf);
     return tok;
@@ -251,16 +250,11 @@ static int handle_double_quote(char **buf, int *s, int *cap)
 static int handle_single_quote(char **buf, int *s, int *cap)
 {
     int c = io_backend_next();
-    // fprintf(stderr, "[SQ] ENTER\n");
-
     while (c != EOF && c != '\'')
     {
-        // fprintf(stderr, "[SQ] c='%c' (%d)\n", c, c);
         *buf = append_char(*buf, s, cap, c);
         c = io_backend_next();
     }
-
-    //    fprintf(stderr, "[SQ] END\n");
     return io_backend_next();
 }
 
@@ -273,7 +267,6 @@ static void handle_backslash(char **buf, int *s, int *cap)
 
     *buf = append_char(*buf, s, cap, '\\');
     *buf = append_char(*buf, s, cap, n);
-    // fprintf(stderr, "[BS] '\\%c' (%d)\n", n, n);
 }
 static struct token *read_tok(int c)
 {
@@ -282,14 +275,9 @@ static struct token *read_tok(int c)
     char *buf = malloc(cap);
     buf[0] = '\0';
 
-    // fprintf(stderr, "\n[read_tok] START c='%c' (%d)\n", c, c);
-
     while (c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<'
            && c != '>' && c != '!')
     {
-        //     fprintf(stderr, "[read_tok] LOOP c='%c' (%d) buf=\"%s\"\n", c, c,
-        //     buf);
-
         if (c == '"')
         {
             c = handle_double_quote(&buf, &s, &cap);
@@ -317,7 +305,6 @@ static struct token *read_tok(int c)
         c = io_backend_next();
     }
 
-    //   fprintf(stderr, "[read_tok] END buf=\"%s\"\n", buf);
     return word_tok(buf);
 }
 

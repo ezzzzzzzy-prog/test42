@@ -66,12 +66,8 @@ static int string_to_int(const char *str)
 }
 static void echo_print(const char *s, int f)
 {
-    //    fprintf(stderr, "[echo_print] f=%d s=\"%s\"\n", f, s);
-
     for (int i = 0; s[i]; i++)
     {
-        //      fprintf(stderr, "  [echo] i=%d c='%c' (%d)\n", i, s[i], s[i]);
-
         if (f && s[i] == '\\' && s[i + 1])
         {
             i++;
@@ -95,50 +91,6 @@ static void echo_print(const char *s, int f)
         }
     }
 }
-
-/*static void echo_print(const char *s, int f)
-{
-    for (int i = 0; s[i];)
-    {
-        if (f && s[i] == '\\' && s[i + 1])
-        {
-            i++;
-            if (s[i] == 'n')
-                putchar('\n');
-            else if (s[i] == 't')
-                putchar('\t');
-            else if (s[i] == '\\')
-                putchar('\\');
-            else if (s[i] == '"')
-                putchar('"');
-            else
-            {
-                putchar('\\');
-                putchar(s[i]);
-            }
-            i++;
-        }
-        else
-        {
-            putchar(s[i]);
-            i++;
-        }
-    }
-}
-*/
-
-/*static int dollar_exception(const char *s)
-{
-    for (int i = 0; s[i]; i++)
-    {
-        if (s[i] == '$')
-        {
-            if (i == 0 || s[i - 1] != '\\')
-                return 1;
-        }
-    }
-    return 0;
-}*/
 
 static int builtin_echo(char **argv, struct parser *parser)
 {
@@ -186,7 +138,6 @@ static int builtin_echo(char **argv, struct parser *parser)
             echo_print(argv[idx], e_flag);
         }
 
-        //        echo_print(argv[idx], e_flag);
         idx++;
     }
 
@@ -370,9 +321,6 @@ static int builtin_unset(char **argv, struct parser *parser)
 
 int execute_builtin(char **argv, struct parser *parser)
 {
-    //    fprintf(stderr, "\n[EXEC] argv:\n");
-    //  for (int i = 0; argv && argv[i]; i++)
-    //    fprintf(stderr, "  argv[%d]=\"%s\"\n", i, argv[i]);
     if (argv == NULL || argv[0] == NULL)
         return -1;
 
