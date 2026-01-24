@@ -604,8 +604,6 @@ char *expand(struct parser *parser, struct special *spe, const char *word)
         return NULL;
     }
     ctx.res[ctx.pos] = '\0';
-    //fprintf(stderr, "[EXPAND] result=\"%s\"\n", ctx.res);
-
     return ctx.res;
 }
 

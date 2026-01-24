@@ -440,58 +440,6 @@ static int add_ast(struct ast ***cmds, size_t *count, size_t *cap,
     return 1;
 }
 
-/*struct ast *parse_compound_list(struct parser *parser)
-{
-    while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
-    {
-        parser_consume(parser);
-    }
-
-    struct ast *first = parse_and_or(parser);
-    if (!first)
-        return NULL;
-
-    size_t cap = 4;
-    size_t count = 1;
-    struct ast **cmds = malloc(sizeof(*cmds) * cap);
-    if (!cmds)
-    {
-        ast_free(first);
-        return NULL;
-    }
-    cmds[0] = first;
-
-    while (parser->curr_tok && !is_list_end(parser->curr_tok->type)
-           && (parser->curr_tok->type == TOK_SEMI
-               || parser->curr_tok->type == TOK_NEWLINE))
-    {
-        parser_consume(parser);
-        while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
-        {
-            parser_consume(parser);
-        }
-        if (parser->curr_tok && is_list_end(parser->curr_tok->type))
-            break;
-        struct ast *next =
-            parse_and_or(parser); // ← DÉPLACE ÇA ICI DANS LA BOUCLE !
-        if (!next)
-            break;
-        if (!add_ast(&cmds, &count, &cap, next))
-            goto error;
-    }
-    if (count == 1)
-    {
-        free(cmds);
-        return first;
-    }
-    return create_list(cmds, count);
-
-error:
-    for (size_t i = 0; i < count; i++)
-        ast_free(cmds[i]);
-    free(cmds);
-    return NULL;
-}*/
 
 static void skip_newlines(struct parser *parser)
 {

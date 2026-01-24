@@ -228,10 +228,7 @@ static int double_quote(char **buf, int *s, int *cap)
                 *buf = append_char(*buf, s, cap, ' '); 
             }
             else
-            {
-           //     *buf = append_char(*buf, s, cap, '\\');
                 *buf = append_char(*buf, s, cap, n);
-            }
         }
         else if (c == '"')
             return io_backend_next();
