@@ -69,12 +69,11 @@ void parser_free(struct parser *parser)
     free(parser);
 }
 
-void add_var(struct parser *parser, char *name, char *value)
+void add_var(struct parser *parser, const char *name, const char *value)
 {
     if (!parser || !name)
-    {
         return;
-    }
+
     struct variable *v = parser->var;
     while (v)
     {
@@ -88,9 +87,8 @@ void add_var(struct parser *parser, char *name, char *value)
     }
     struct variable *var = malloc(sizeof(*var));
     if (!var)
-    {
         return;
-    }
+
     var->nom = strdup(name);
     var->value = strdup(value);
     var->next = parser->var;

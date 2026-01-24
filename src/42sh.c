@@ -24,28 +24,23 @@ int main(int argc, char **argv)
     exec_set_parser(parser);
 
     int status = 0;
-
     while (!parser->exit)
     {
         struct ast *ast = parser_input(parser);
         if (!ast)
             break;
-
         status = exec_ast(ast);
         parser->last_code = status;
-
         ast_free(ast);
     }
+
     int should_exit = parser->exit;
     int exit_code = parser->ex_code;
-
     free_special(parser->spe);
     parser_free(parser);
-
     io_backend_close();
 
     if (should_exit)
         _exit(exit_code);
-
     return status;
 }

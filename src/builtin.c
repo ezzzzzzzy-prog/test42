@@ -117,7 +117,9 @@ static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
     return 0;
 }
 
-static void print_echo_arg(char **argv, int idx, struct parser *parser, int e_flag)
+/*
+static void print_echo_arg(char **argv, int idx, struct parser *parser, int
+e_flag)
 {
     char *expanded = expand(parser, parser->spe, argv[idx]);
     if (expanded)
@@ -128,6 +130,7 @@ static void print_echo_arg(char **argv, int idx, struct parser *parser, int e_fl
     else
         echo_print(argv[idx], e_flag);
 }
+*/
 
 static int builtin_echo(char **argv, struct parser *parser)
 {
@@ -136,47 +139,53 @@ static int builtin_echo(char **argv, struct parser *parser)
     int idx = 1;
 
     parse_echo_flags(argv, &idx, &n_flag, &e_flag);
-
     int first = 1;
+
     while (argv[idx])
     {
-        if (!first)
-            putchar(' ');
-        first = 0;
-        print_echo_arg(argv, idx, parser, e_flag);
+        char *expanded = expand(parser, parser->spe, argv[idx]);
+        char *to_print = expanded ? expanded : argv[idx];
+
+        if (to_print && *to_print)
+        {
+            if (!first)
+                putchar(' ');
+            first = 0;
+            echo_print(to_print, e_flag);
+        }
+
+        if (expanded)
+            free(expanded);
         idx++;
     }
-
     if (!n_flag)
         putchar('\n');
-
     fflush(stdout);
     return 0;
 }
 
 static int builtin_break(char **argv)
 {
-    (void)argv;
+    if (argv && argv[0])
+        return 0;
     return EXEC_BREAK;
 }
 
 static int builtin_continue(char **argv)
 {
-    (void)argv;
+    if (argv && argv[0])
+        return 0;
     return EXEC_CONTINUE;
 }
+
 static int builtin_true(char **argv)
 {
-    if (argv)
-        argv = argv;
-    return 0;
+    return argv ? 0 : 0;
 }
 
 static int builtin_false(char **argv)
 {
-    if (argv)
-        argv = argv;
-    return 1;
+    return argv ? 1 : 1;
 }
 
 static int builtin_exit(char **argv, struct parser *parser)
@@ -184,7 +193,9 @@ static int builtin_exit(char **argv, struct parser *parser)
     int end_code = 0;
     if (argv[1] == NULL)
     {
-        end_code = string_to_int(argv[1]);
+        parser->exit = 1;
+        parser->ex_code = parser->last_code;
+        return 0;
     }
 
     if (argv[2] != NULL)

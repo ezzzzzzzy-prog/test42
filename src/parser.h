@@ -31,6 +31,5 @@ struct ast *parse_rule_for(struct parser *parser); // AJOUT
 struct ast *parse_rule_while(struct parser *parser); // AJOUT
 struct ast *parse_rule_until(struct parser *parser); // AJOUT
 void parser_free(struct parser *parser);
-void add_var(struct parser *parser, char *name, char *value);
-
+void add_var(struct parser *parser, const char *name, const char *value);
 #endif /* PARSER_H */

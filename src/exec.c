@@ -301,7 +301,10 @@ static void restore_before(struct parser *parser, const char *name,
     struct variable *prev = NULL;
     if (defined && before_value)
     {
-        add_var(parser, (char *)name, before_value);
+        char *name_copy = strdup(name);
+        char *value_copy = strdup(before_value);
+        add_var(parser, name_copy, value_copy);
+
         free(before_value);
         return;
     }
@@ -329,7 +332,7 @@ static void restore_before(struct parser *parser, const char *name,
 
 static void update(struct parser *parser, const char *name, const char *value)
 {
-    add_var(parser, (char *)name, (char *)value);
+    add_var(parser, name, value);
     struct variable *var = get_var(parser, name);
     if (var)
     {

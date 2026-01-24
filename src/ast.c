@@ -57,11 +57,30 @@ static void free_ast_for(struct ast_for *f)
     ast_free(f->body);
 }
 
-void ast_free(struct ast *ast)
+static void free_ast_andor(struct ast_and_or *a)
 {
-    if (!ast)
-        return;
+    ast_free(a->left);
+    ast_free(a->right);
+}
 
+static void free_ast_negation(struct ast_negation *n)
+{
+    ast_free(n->child);
+}
+
+static void free_ast_redir(struct ast_redirection *r)
+{
+    ast_free(r->left);
+    free(r->file);
+}
+
+static void free_ast_subshell(struct ast_subshell *s)
+{
+    ast_free(s->body);
+}
+
+static void ast_free_switch1(struct ast *ast)
+{
     switch (ast->type)
     {
     case AST_COMMAND:
@@ -85,36 +104,41 @@ void ast_free(struct ast *ast)
     case AST_FOR:
         free_ast_for((struct ast_for *)ast);
         break;
+    default:
+        return;
+    }
+}
+
+static void ast_free_switch2(struct ast *ast)
+{
+    switch (ast->type)
+    {
     case AST_AND:
     case AST_OR:
-    {
-        struct ast_and_or *a = (struct ast_and_or *)ast;
-        ast_free(a->left);
-        ast_free(a->right);
+        free_ast_andor((struct ast_and_or *)ast);
         break;
-    }
     case AST_NEGATION:
-    {
-        struct ast_negation *n = (struct ast_negation *)ast;
-        ast_free(n->child);
+        free_ast_negation((struct ast_negation *)ast);
         break;
-    }
     case AST_REDIRECTION:
-    {
-        struct ast_redirection *r = (struct ast_redirection *)ast;
-        ast_free(r->left);
-        free(r->file);
+        free_ast_redir((struct ast_redirection *)ast);
         break;
-    }
     case AST_SUBSHELL:
-    {
-        struct ast_subshell *s = (struct ast_subshell *)ast;
-        ast_free(s->body);
+        free_ast_subshell((struct ast_subshell *)ast);
         break;
-    }
     case AST_BREAK:
     case AST_CONTINUE:
         break;
+    default:
+        ast_free_switch1(ast);
+        return;
     }
+}
+
+void ast_free(struct ast *ast)
+{
+    if (!ast)
+        return;
+    ast_free_switch2(ast);
     free(ast);
 }
