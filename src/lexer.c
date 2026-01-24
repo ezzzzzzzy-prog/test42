@@ -206,7 +206,7 @@ static struct token *word_tok(char *buf)
     free(buf);
     return tok;
 }
-static int handle_double_quote(char **buf, int *s, int *cap)
+static int double_quote(char **buf, int *s, int *cap)
 {
     int c = io_backend_next(); 
 
@@ -222,9 +222,14 @@ static int handle_double_quote(char **buf, int *s, int *cap)
             {
                 // IGNORE
             }
+            else if ( n == ' ')
+            {
+                *buf = append_char(*buf, s, cap, '\\'); 
+                *buf = append_char(*buf, s, cap, ' '); 
+            }
             else
             {
-                *buf = append_char(*buf, s, cap, '\\');
+           //     *buf = append_char(*buf, s, cap, '\\');
                 *buf = append_char(*buf, s, cap, n);
             }
         }
@@ -236,7 +241,7 @@ static int handle_double_quote(char **buf, int *s, int *cap)
     }
     return c;
 }
-static int handle_single_quote(char **buf, int *s, int *cap)
+static int single_quote(char **buf, int *s, int *cap)
 {
     int c = io_backend_next();
     while (c != EOF && c != '\'')
@@ -246,7 +251,7 @@ static int handle_single_quote(char **buf, int *s, int *cap)
     }
     return io_backend_next();
 }
-static void handle_backslash(char **buf, int *s, int *cap)
+static void backslash(char **buf, int *s, int *cap)
 {
     int n = io_backend_next();
     if (n == '\n')
@@ -264,16 +269,16 @@ static struct token *read_tok(int c)
     {
         if (c == '"')
         {
-            c = handle_double_quote(&buf, &s, &cap);
+            c = double_quote(&buf, &s, &cap);
             continue;
         }
         else if (c == '\'')
         {
-            c = handle_single_quote(&buf, &s, &cap);
+            c = single_quote(&buf, &s, &cap);
             continue;
         }
         else if (c == '\\')
-            handle_backslash(&buf, &s, &cap);
+            backslash(&buf, &s, &cap);
         else
             buf = append_char(buf, &s, &cap, c);
 

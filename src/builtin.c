@@ -98,6 +98,7 @@ static int builtin_echo(char **argv, struct parser *parser)
     int n_flag = 0;
     int e_flag = 0;
     int idx = 1;
+    //fprintf(stderr, "[ECHO] start\n");
 
     while (argv[idx] && argv[idx][0] == '-')
     {
@@ -133,16 +134,20 @@ static int builtin_echo(char **argv, struct parser *parser)
         {
             if (*expanded)
                 printed = 1;
+      //      fprintf(stderr, "[ECHO] arg='%s'\n", expanded ? expanded : argv[idx]);
+
             echo_print(expanded, e_flag);
             free(expanded);
         }
         else
         {
+        //    fprintf(stderr, "[ECHO] arg='%s'\n", expanded ? expanded : argv[idx]);
             echo_print(argv[idx], e_flag);
         }
 
         idx++;
     }
+//fprintf(stderr, "[ECHO] newline=%d\n", !n_flag);
 
     if (!n_flag)
         putchar('\n');
@@ -178,12 +183,13 @@ static int builtin_false(char **argv)
 
 static int builtin_exit(char **argv, struct parser *parser)
 {
+  //    fprintf(stderr, "[BUILTIN_EXIT] called\n");
+    //for (int i = 0; argv[i]; i++)
+      //  fprintf(stderr, "  argv[%d] = '%s'\n", i, argv[i]);
     int end_code = 0;
     if (argv[1] == NULL)
     {
-        parser->exit = 1;
-        parser->ex_code = parser->last_code;
-        return 0;
+        end_code = string_to_int(argv[1]);
     }
 
     if (argv[2] != NULL)
@@ -193,8 +199,11 @@ static int builtin_exit(char **argv, struct parser *parser)
     }
 
     end_code = string_to_int(argv[1]);
+        //fprintf(stderr,    "[BUILTIN_EXIT] setting exit=1 code=%d\n",end_code);
+
     parser->exit = 1;
     parser->ex_code = end_code;
+    //fprintf(stderr,"[BUILTIN_EXIT] return %d exit=%d ex_code=%d\n",end_code,parser->exit,parser->ex_code);
     return end_code;
 }
 

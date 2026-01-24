@@ -19,12 +19,19 @@ struct parser *g_parser = NULL;
 
 static int exec_command(char **argv)
 {
-    if (!argv || !argv[0])
+    /*fprintf(stderr, "[EXEC_COMMAND]\n");
+    if (argv)
+        for (int i = 0; argv[i]; i++)
+            fprintf(stderr, "  argv[%d] = '%s'\n", i, argv[i]);
+    */if (!argv || !argv[0])
         return 0;
 
     if (is_builtin(argv[0]))
     {
-        return execute_builtin(argv, g_parser);
+      //  fprintf(stderr, "[EXEC_COMMAND] builtin '%s'\n", argv[0]);
+        int r = execute_builtin(argv, g_parser);
+         //fprintf(stderr,"[EXEC_COMMAND] builtin return=%d exit=%d ex_code=%d\n",r,g_parser->exit,g_parser->ex_code);
+        return r;
     }
     char **expanded_argv = malloc(sizeof(char *) * 64);
     if (!expanded_argv)
@@ -47,7 +54,7 @@ static int exec_command(char **argv)
     expanded_argv[count] = NULL;
 
     // pid_t pid = fork();
-
+    //fprintf(stderr, "[EXEC_COMMAND] forking external '%s'\n", argv[0]);
     pid_t pid = fork();
 
     if (pid < 0)
@@ -606,6 +613,7 @@ static int exec_redirection(struct ast *ast)
 }
 static int exec_subshell(struct ast *ast)
 {
+    //fprintf(stderr, "[SUBSHELL] enter\n");
     struct ast_subshell *s = (struct ast_subshell *)ast;
     // child
     pid_t pid = fork();
@@ -614,14 +622,24 @@ static int exec_subshell(struct ast *ast)
     // in child
     if (pid == 0)
     {
-        // execute whats in paran or brack
+
+    // Subshell must not propagate exit
+        g_parser = NULL;
+
         int status = exec_ast(s->body);
         fflush(stdout);
+
         _exit(status);
+
+       // execute whats in paran or brack
+        /*int status = exec_ast(s->body);
+        fflush(stdout);
+        _exit(status);*/
     }
     // exit code returns
     int status;
     waitpid(pid, &status, 0);
+    //fprintf(stderr, "[SUBSHELL PARENT] status=%d\n", status );
     if (WIFEXITED(status))
         return WEXITSTATUS(status);
     return 1;
@@ -629,9 +647,20 @@ static int exec_subshell(struct ast *ast)
 
 int exec_ast(struct ast *ast)
 {
-    if (g_parser && g_parser->exit)
-        _exit(g_parser->ex_code);
 
+    /*fprintf(stderr,"[EXEC_AST] enter ast=%p type=%d exit=%d ex_code=%d\n",
+    (void *)ast,
+    ast ? (int)ast->type : -1,
+    g_parser ? g_parser->exit : -1,
+    g_parser ? g_parser->ex_code : -1
+);*/
+
+   if (g_parser && g_parser->exit)
+    {
+        //fprintf(stderr,"[EXEC_AST] GLOBAL EXIT TRIGGER code=%d\n", g_parser->ex_code );
+        fflush(stdout);
+        _exit(g_parser->ex_code);
+    }
     if (!ast)
         return 0;
 
