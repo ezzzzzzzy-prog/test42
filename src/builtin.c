@@ -92,53 +92,58 @@ static void echo_print(const char *s, int f)
     }
 }
 
-static int builtin_echo(char **argv, struct parser *parser)
+static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
 {
-    (void)parser;
-    int n_flag = 0;
-    int e_flag = 0;
-    int idx = 1;
-
-    while (argv[idx] && argv[idx][0] == '-')
+    while (argv[*idx] && argv[*idx][0] == '-')
     {
-        if (!strcmp(argv[idx], "-n"))
+        if (!strcmp(argv[*idx], "-n"))
         {
-            n_flag = 1;
-            idx++;
+            *n_flag = 1;
+            *idx = *idx + 1;
         }
-        else if (!strcmp(argv[idx], "-e"))
+        else if (!strcmp(argv[*idx], "-e"))
         {
-            e_flag = 1;
-            idx++;
+            *e_flag = 1;
+            *idx = *idx + 1;
         }
-        else if (!strcmp(argv[idx], "-E"))
+        else if (!strcmp(argv[*idx], "-E"))
         {
-            e_flag = 0;
-            idx++;
+            *e_flag = 0;
+            *idx = *idx + 1;
         }
         else
             break;
     }
+    return 0;
+}
+
+static void print_echo_arg(char **argv, int idx, struct parser *parser, int e_flag)
+{
+    char *expanded = expand(parser, parser->spe, argv[idx]);
+    if (expanded)
+    {
+        echo_print(expanded, e_flag);
+        free(expanded);
+    }
+    else
+        echo_print(argv[idx], e_flag);
+}
+
+static int builtin_echo(char **argv, struct parser *parser)
+{
+    int n_flag = 0;
+    int e_flag = 0;
+    int idx = 1;
+
+    parse_echo_flags(argv, &idx, &n_flag, &e_flag);
 
     int first = 1;
-    int printed = 0;
     while (argv[idx])
     {
-        if (!first && printed)
+        if (!first)
             putchar(' ');
         first = 0;
-        char *expanded = expand(parser, parser->spe, argv[idx]);
-
-        if (expanded)
-        {
-            if (*expanded)
-                printed = 1;
-            echo_print(expanded, e_flag);
-            free(expanded);
-        }
-        else
-            echo_print(argv[idx], e_flag);
-
+        print_echo_arg(argv, idx, parser, e_flag);
         idx++;
     }
 
@@ -191,7 +196,7 @@ static int builtin_exit(char **argv, struct parser *parser)
     end_code = string_to_int(argv[1]);
     parser->exit = 1;
     parser->ex_code = end_code;
-    
+
     return end_code;
 }
 

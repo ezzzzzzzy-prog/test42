@@ -191,7 +191,7 @@ struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
     struct ast *r = create_redir(curr_redir_type, left_cmd, f, redir_nb);
     if (!r)
     {
-        free(f); 
+        free(f);
         return NULL;
     }
     return r;
@@ -439,7 +439,6 @@ static int add_ast(struct ast ***cmds, size_t *count, size_t *cap,
     (*cmds)[(*count)++] = next;
     return 1;
 }
-
 
 static void skip_newlines(struct parser *parser)
 {
@@ -877,7 +876,6 @@ static struct ast *parse_br_ct(struct parser *parser)
     return NULL;
 }
 
-
 static struct ast *parse_simple_with_redir(struct parser *parser)
 {
     struct ast *cmd = parse_simple_command(parser);
@@ -896,7 +894,6 @@ static struct ast *parse_simple_with_redir(struct parser *parser)
     }
     return cmd;
 }
-
 
 static struct ast *parse_command(struct parser *parser)
 {

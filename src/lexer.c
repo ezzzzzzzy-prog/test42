@@ -221,10 +221,10 @@ static int double_quote(char **buf, int *s, int *cap)
             {
                 // IGNORE
             }
-            else if ( n == ' ')
+            else if (n == ' ')
             {
-                *buf = append_char(*buf, s, cap, '\\'); 
-                *buf = append_char(*buf, s, cap, ' '); 
+                *buf = append_char(*buf, s, cap, '\\');
+                *buf = append_char(*buf, s, cap, ' ');
             }
             else
                 *buf = append_char(*buf, s, cap, n);

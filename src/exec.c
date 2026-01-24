@@ -28,7 +28,6 @@ static int exec_command(char **argv)
         if (g_parser && g_parser->exit)
             _exit(g_parser->ex_code);
         return ret;
-        
     }
     char **expanded_argv = malloc(sizeof(char *) * 64);
     if (!expanded_argv)
@@ -517,29 +516,29 @@ static int exec_redirection(struct ast *ast)
 static int exec_subshell(struct ast *ast)
 {
     struct ast_subshell *s = (struct ast_subshell *)ast;
-    //child
+    // child
     pid_t pid = fork();
     if (pid < 0)
         return 1;
 
     if (pid == 0)
     {
-        //in child
-        //current status on if exit or not
+        // in child
+        // current status on if exit or not
         int saved_exit = g_parser->exit;
-        //code from global shell 
+        // code from global shell
         int saved_code = g_parser->ex_code;
 
-        //set exit to not exit immediatly
+        // set exit to not exit immediatly
         g_parser->exit = 0;
-        //execute whats inside paran or brackets
+        // execute whats inside paran or brackets
         int status = exec_ast(s->body);
-        
+
         fflush(stdout);
-        //restore all previous 
+        // restore all previous
         g_parser->exit = saved_exit;
         g_parser->ex_code = saved_code;
-        //exit from child and return status to par
+        // exit from child and return status to par
         _exit(status);
     }
 
@@ -552,7 +551,7 @@ static int exec_subshell(struct ast *ast)
 
 int exec_ast(struct ast *ast)
 {
-   if (g_parser && g_parser->exit)
+    if (g_parser && g_parser->exit)
     {
         fflush(stdout);
         _exit(g_parser->ex_code);
