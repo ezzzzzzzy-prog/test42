@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 COVERAGE_MODE=0
 if [ "${COVERAGE:-}" = "yes" ]; then
     COVERAGE_MODE=1
@@ -16,7 +15,7 @@ PASS=0
 PASS_C=0
 
 if [ "$COVERAGE_MODE" -eq 1 ]; then
-    echo "[INFO] Running unit tests" >&2
+    echo "[INFO] tests UNITAIRES" >&2
     for unit in tests/test_unitaires/test_*; do
         [ -x "$unit" ] || continue
         TOTAL_C=$((TOTAL_C + 1))
