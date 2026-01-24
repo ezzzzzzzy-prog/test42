@@ -183,8 +183,18 @@ struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
     if (!parser->curr_tok || parser->curr_tok->type != TOK_WORD)
         return NULL;
     char *f = strdup(parser->curr_tok->val);
+    if (!f)
+        return NULL;
+
     parser_consume(parser);
-    return create_redir(curr_redir_type, left_cmd, f, redir_nb);
+
+    struct ast *r = create_redir(curr_redir_type, left_cmd, f, redir_nb);
+    if (!r)
+    {
+        free(f); 
+        return NULL;
+    }
+    return r;
 }
 
 static struct ast *app_redir(struct ast *root, struct ast *new_redir)
@@ -282,6 +292,7 @@ struct ast *parse_simple_command(struct parser *parser)
 
 error:
     free_words(words, count);
+    ast_free(res);
     return NULL;
 }
 

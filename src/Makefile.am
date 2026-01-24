@@ -2,6 +2,7 @@ bin_PROGRAMS = 42sh
 
 42sh_SOURCES = \
     42sh.c \
+	ast.c \
     ast_create.c \
 	ast_create_basics.c \
 	builtin.c \
