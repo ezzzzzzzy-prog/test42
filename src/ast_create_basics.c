@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include "ast.h"
 
 struct ast *create_cmd(char **words)
@@ -9,6 +10,7 @@ struct ast *create_cmd(char **words)
 
     cmd->base.type = AST_COMMAND;
     cmd->words = words;
+
     return (struct ast *)cmd;
 }
 
@@ -19,9 +21,11 @@ struct ast *create_list(struct ast **cmds, size_t count)
         return NULL;
 
     list->base.type = AST_LIST;
+
     list->commands = cmds;
     list->count = count;
     list->sep = ";";
+
     return (struct ast *)list;
 }
 
@@ -33,61 +37,67 @@ struct ast *ast_pipeline_create(struct ast **cmds, size_t count)
 
     p->base.type = AST_PIPELINE;
     p->cmds = cmds;
+
     p->count = count;
+
     return (struct ast *)p;
 }
 
 struct ast *create_negation(struct ast *child)
 {
-    struct ast_negation *n = malloc(sizeof(*n));
-    if (!n)
+    struct ast_negation *nope = malloc(sizeof(*nope));
+    if (!nope)
         return NULL;
 
-    n->base.type = AST_NEGATION;
-    n->child = child;
-    return (struct ast *)n;
+    nope->base.type = AST_NEGATION;
+    nope->child = child;
+
+    return (struct ast *)nope;
 }
 
 struct ast *create_and(struct ast *left, struct ast *right)
 {
-    struct ast_and_or *a = malloc(sizeof(*a));
-    if (!a)
+    struct ast_and_or *and = malloc(sizeof(*and));
+    if (!and)
         return NULL;
 
-    a->base.type = AST_AND;
-    a->left = left;
-    a->right = right;
-    return (struct ast *)a;
+    and->base.type = AST_AND;
+    and->left = left;
+
+    and->right = right;
+
+    return (struct ast *) and;
 }
 
 struct ast *create_or(struct ast *left, struct ast *right)
 {
-    struct ast_and_or *o = malloc(sizeof(*o));
-    if (!o)
+    struct ast_and_or *and_or = malloc(sizeof(*and_or));
+    if (!and_or)
         return NULL;
 
-    o->base.type = AST_OR;
-    o->left = left;
-    o->right = right;
-    return (struct ast *)o;
+    and_or->base.type = AST_OR;
+    and_or->left = left;
+    and_or->right = right;
+    return (struct ast *)and_or;
 }
 
 struct ast *create_break(void)
 {
-    struct ast *b = malloc(sizeof(*b));
-    if (!b)
+    struct ast *br = malloc(sizeof(*br));
+    if (!br)
         return NULL;
 
-    b->type = AST_BREAK;
-    return b;
+    br->type = AST_BREAK;
+
+    return br;
 }
 
 struct ast *create_continue(void)
 {
-    struct ast *c = malloc(sizeof(*c));
-    if (!c)
+    struct ast *cont = malloc(sizeof(*cont));
+    if (!cont)
         return NULL;
 
-    c->type = AST_CONTINUE;
-    return c;
+    cont->type = AST_CONTINUE;
+    return cont;
 }

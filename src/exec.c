@@ -19,24 +19,16 @@ struct parser *g_parser = NULL;
 
 static int exec_command(char **argv)
 {
-    /*fprintf(stderr, "[EXEC_COMMAND]\n");
-    if (argv)
-        for (int i = 0; argv[i]; i++)
-            fprintf(stderr, "  argv[%d] = '%s'\n", i, argv[i]);
-    */if (!argv || !argv[0])
+    if (!argv || !argv[0])
         return 0;
 
     if (is_builtin(argv[0]))
     {
-      //  fprintf(stderr, "[EXEC_COMMAND] builtin '%s'\n", argv[0]);
-         int ret = execute_builtin(argv, g_parser);
+        int ret = execute_builtin(argv, g_parser);
         if (g_parser && g_parser->exit)
             _exit(g_parser->ex_code);
         return ret;
         
-        //int r = execute_builtin(argv, g_parser);
-         //fprintf(stderr,"[EXEC_COMMAND] builtin return=%d exit=%d ex_code=%d\n",r,g_parser->exit,g_parser->ex_code);
-        //return r;
     }
     char **expanded_argv = malloc(sizeof(char *) * 64);
     if (!expanded_argv)
@@ -57,9 +49,6 @@ static int exec_command(char **argv)
         }
     }
     expanded_argv[count] = NULL;
-
-    // pid_t pid = fork();
-    //fprintf(stderr, "[EXEC_COMMAND] forking external '%s'\n", argv[0]);
     pid_t pid = fork();
 
     if (pid < 0)
@@ -72,8 +61,6 @@ static int exec_command(char **argv)
     {
         execvp(argv[0], argv);
         fprintf(stderr, "%s command not found\n", argv[0]);
-
-        //        perror(argv[0]);
         _exit(127);
     }
 
@@ -122,7 +109,6 @@ static int exec_pipeline_simple(struct ast_pipeline *p)
         if (cmd->type == AST_REDIRECTION)
             return exec_redirection(cmd);
         return exec_ast(cmd);
-        //return exec_ast(p->cmds[0]);
     }
     return -1;
 }
@@ -531,24 +517,29 @@ static int exec_redirection(struct ast *ast)
 static int exec_subshell(struct ast *ast)
 {
     struct ast_subshell *s = (struct ast_subshell *)ast;
-
+    //child
     pid_t pid = fork();
     if (pid < 0)
         return 1;
 
     if (pid == 0)
     {
+        //in child
+        //current status on if exit or not
         int saved_exit = g_parser->exit;
+        //code from global shell 
         int saved_code = g_parser->ex_code;
 
+        //set exit to not exit immediatly
         g_parser->exit = 0;
-
+        //execute whats inside paran or brackets
         int status = exec_ast(s->body);
+        
         fflush(stdout);
-
+        //restore all previous 
         g_parser->exit = saved_exit;
         g_parser->ex_code = saved_code;
-
+        //exit from child and return status to par
         _exit(status);
     }
 
@@ -559,53 +550,10 @@ static int exec_subshell(struct ast *ast)
     return 1;
 }
 
-/*static int exec_subshell(struct ast *ast)
-{
-    //fprintf(stderr, "[SUBSHELL] enter\n");
-    struct ast_subshell *s = (struct ast_subshell *)ast;
-    // child
-    pid_t pid = fork();
-    if (pid < 0)
-        return 1;
-    // in child
-    if (pid == 0)
-    {
-
-    // Subshell must not propagate exit
-        g_parser = NULL;
-
-        int status = exec_ast(s->body);
-        fflush(stdout);
-
-        _exit(status);
-
-       // execute whats in paran or brack
-        //int status = exec_ast(s->body);
-        //fflush(stdout);
-        //_exit(status);
-    }
-    // exit code returns
-    int status;
-    waitpid(pid, &status, 0);
-    //fprintf(stderr, "[SUBSHELL PARENT] status=%d\n", status );
-    if (WIFEXITED(status))
-        return WEXITSTATUS(status);
-    return 1;
-}
-*/
 int exec_ast(struct ast *ast)
 {
-
-    /*fprintf(stderr,"[EXEC_AST] enter ast=%p type=%d exit=%d ex_code=%d\n",
-    (void *)ast,
-    ast ? (int)ast->type : -1,
-    g_parser ? g_parser->exit : -1,
-    g_parser ? g_parser->ex_code : -1
-);*/
-
    if (g_parser && g_parser->exit)
     {
-        //fprintf(stderr,"[EXEC_AST] GLOBAL EXIT TRIGGER code=%d\n", g_parser->ex_code );
         fflush(stdout);
         _exit(g_parser->ex_code);
     }

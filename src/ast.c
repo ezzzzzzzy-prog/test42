@@ -1,6 +1,6 @@
 #include "ast.h"
-#include <stdlib.h>
 
+#include <stdlib.h>
 
 void ast_free(struct ast *ast)
 {

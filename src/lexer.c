@@ -208,8 +208,7 @@ static struct token *word_tok(char *buf)
 }
 static int double_quote(char **buf, int *s, int *cap)
 {
-    int c = io_backend_next(); 
-
+    int c = io_backend_next();
     while (c != EOF)
     {
         if (c == '\\')

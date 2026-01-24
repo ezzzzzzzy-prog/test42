@@ -1,8 +1,9 @@
 #include <stdlib.h>
+
 #include "ast.h"
 
-struct ast *create_if(struct ast *cond,struct ast *then_body,
-        struct ast *else_body)
+struct ast *create_if(struct ast *cond, struct ast *then_body,
+                      struct ast *else_body)
 {
     struct ast_if *n = malloc(sizeof(*n));
     if (!n)
@@ -12,6 +13,7 @@ struct ast *create_if(struct ast *cond,struct ast *then_body,
     n->condition = cond;
     n->then_body = then_body;
     n->else_body = else_body;
+
     return (struct ast *)n;
 }
 
@@ -34,8 +36,10 @@ struct ast *create_until(struct ast *cond, struct ast *body)
         return NULL;
 
     u->base.type = AST_UNTIL;
+
     u->condition = cond;
     u->body = body;
+
     return (struct ast *)u;
 }
 
@@ -48,14 +52,16 @@ struct ast *create_for(char *var, char **words, struct ast *body)
     f->base.type = AST_FOR;
     f->var = var;
     f->words = words;
+
     f->body = body;
     return (struct ast *)f;
 }
 
-struct ast *create_redir(enum redir_type type,struct ast *left,char *file,
-        int redir_nb)
+struct ast *create_redir(enum redir_type type, struct ast *left, char *file,
+                         int redir_nb)
 {
     struct ast_redirection *r = malloc(sizeof(*r));
+
     if (!r)
         return NULL;
 
@@ -64,6 +70,7 @@ struct ast *create_redir(enum redir_type type,struct ast *left,char *file,
     r->left = left;
     r->file = file;
     r->redir_nb = redir_nb;
+
     return (struct ast *)r;
 }
 
@@ -77,4 +84,3 @@ struct ast *create_subshell(struct ast *body)
     s->body = body;
     return (struct ast *)s;
 }
-

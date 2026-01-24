@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         ast_free(ast);
     }
     int should_exit = parser->exit;
-    int exit_code   = parser->ex_code;
+    int exit_code = parser->ex_code;
 
     free_special(parser->spe);
     parser_free(parser);
