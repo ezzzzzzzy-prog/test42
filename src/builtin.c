@@ -121,15 +121,18 @@ static int builtin_echo(char **argv, struct parser *parser)
     }
 
     int first = 1;
+    int printed = 0;
     while (argv[idx])
     {
-        if (!first)
+        if (!first && printed)
             putchar(' ');
         first = 0;
         char *expanded = expand(parser, parser->spe, argv[idx]);
 
         if (expanded)
         {
+            if (*expanded)
+                printed = 1;
             echo_print(expanded, e_flag);
             free(expanded);
         }

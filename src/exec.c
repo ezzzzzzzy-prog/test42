@@ -616,6 +616,7 @@ static int exec_subshell(struct ast *ast)
     {
         // execute whats in paran or brack
         int status = exec_ast(s->body);
+        fflush(stdout);
         _exit(status);
     }
     // exit code returns
