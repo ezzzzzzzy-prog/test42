@@ -208,7 +208,7 @@ static struct token *word_tok(char *buf)
 }
 static int handle_double_quote(char **buf, int *s, int *cap)
 {
-    int c = io_backend_next();
+    int c = io_backend_next(); 
 
     while (c != EOF)
     {
@@ -217,32 +217,21 @@ static int handle_double_quote(char **buf, int *s, int *cap)
             int n = io_backend_next();
 
             if (n == '"' || n == '\\' || n == '$' || n == '`')
-            {
                 *buf = append_char(*buf, s, cap, n);
-            }
             else if (n == '\n')
             {
-                // continuation
-            }
-            else if (n == ' ')
-            {
-                *buf = append_char(*buf, s, cap, '\\');
-                *buf = append_char(*buf, s, cap, ' ');
+                // IGNORE
             }
             else
             {
+                *buf = append_char(*buf, s, cap, '\\');
                 *buf = append_char(*buf, s, cap, n);
             }
         }
         else if (c == '"')
-        {
             return io_backend_next();
-        }
         else
-        {
             *buf = append_char(*buf, s, cap, c);
-        }
-
         c = io_backend_next();
     }
     return c;
@@ -257,15 +246,11 @@ static int handle_single_quote(char **buf, int *s, int *cap)
     }
     return io_backend_next();
 }
-
 static void handle_backslash(char **buf, int *s, int *cap)
 {
     int n = io_backend_next();
-
     if (n == '\n')
         return;
-
-    *buf = append_char(*buf, s, cap, '\\');
     *buf = append_char(*buf, s, cap, n);
 }
 static struct token *read_tok(int c)
@@ -274,7 +259,6 @@ static struct token *read_tok(int c)
     int s = 0;
     char *buf = malloc(cap);
     buf[0] = '\0';
-
     while (c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<'
            && c != '>' && c != '!')
     {
@@ -289,13 +273,9 @@ static struct token *read_tok(int c)
             continue;
         }
         else if (c == '\\')
-        {
             handle_backslash(&buf, &s, &cap);
-        }
         else
-        {
             buf = append_char(buf, &s, &cap, c);
-        }
 
         c = io_backend_peek();
         if (c == EOF || isspace(c) || c == ';' || c == '|' || c == '<'
@@ -308,68 +288,6 @@ static struct token *read_tok(int c)
     return word_tok(buf);
 }
 
-/*static struct token *read_tok(int c)
-{
-    int cap = 64;
-    int s = 0;
-    // int sg_qt = 0;
-    int db_qt = 0;
-    char *buf = malloc(cap);
-    buf[0] = '\0';
-    while (c != EOF && !isspace(c) && c != ';' && c != '|' && c != '<'
-           && c != '>' && c != '!')
-    {
-        if (c == '"')
-        {
-            db_qt = 1;
-            c = io_backend_next();
-            buf = append_char(buf, &s, &cap, c);
-            while ((c = io_backend_next()) != EOF && c != '"')
-            {
-                buf = append_char(buf, &s, &cap, c);
-            }
-            if (c == '"')
-            {
-                db_qt = 0; // exit double quotes
-                c = io_backend_next(); // move past closing "
-                continue;
-            }
-            // buf = append_char(buf, &s, &cap, '"');
-            db_qt = 0;
-        }
-        else if (c == '\'')
-        {
-            buf = append_char(buf, &s, &cap, c);
-            while ((c = io_backend_next()) != EOF && c != '\'')
-            {
-                // buf = esc(buf, &s, &cap, c,db_qt);
-                buf = append_char(buf, &s, &cap, c);
-            }
-            if (c == '\'')
-                buf = append_char(buf, &s, &cap, '\'');
-        }
-        else if (c == '\\')
-        {
-            int n = io_backend_peek();
-
-            if (n == '\n')
-                io_backend_next();
-            else if (db_qt)
-                buf = append_char(buf, &s, &cap, io_backend_next());
-            else
-                buf = append_char(buf, &s, &cap, c);
-        }
-        else
-            buf = append_char(buf, &s, &cap, c);
-
-        c = io_backend_peek();
-        if (c == EOF || isspace(c) || c == ';' || c == '|' || c == '<'
-            || c == '>' || c == '!')
-            break;
-        c = io_backend_next();
-    }
-    return word_tok(buf);
-}*/
 static struct token *redir_nb(int c)
 {
     int n = c;

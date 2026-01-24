@@ -14,6 +14,7 @@
 #include "expansion.h"
 #include "parser.h"
 
+static int exec_redirection(struct ast *ast);
 struct parser *g_parser = NULL;
 
 static int exec_command(char **argv)
@@ -193,7 +194,11 @@ static int exec_pipeline_simple(struct ast_pipeline *p)
     }
     if (p->count == 1)
     {
-        return exec_ast(p->cmds[0]);
+        struct ast *cmd = p->cmds[0];
+        if (cmd->type == AST_REDIRECTION)
+            return exec_redirection(cmd);
+        return exec_ast(cmd);
+        //return exec_ast(p->cmds[0]);
     }
     return -1;
 }
@@ -624,7 +629,7 @@ static int exec_subshell(struct ast *ast)
 int exec_ast(struct ast *ast)
 {
     if (g_parser && g_parser->exit)
-        return g_parser->ex_code;
+        _exit(g_parser->ex_code);
 
     if (!ast)
         return 0;

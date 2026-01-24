@@ -123,12 +123,6 @@ static char *get_name_brace(const char *word, size_t *i)
 static const char *find_var(const char *name, struct variable *var)
 {
     struct variable *actuel = var;
-    /*while (actuel)
-    {
-        actuel = actuel->next;
-    }
-
-    actuel = var; */
     while (actuel)
     {
         if (actuel->nom && strcmp(actuel->nom, name) == 0)
@@ -509,66 +503,6 @@ static int exp_simple(struct exp_params *p, const char *word, size_t *i)
     free(nom);
     return ret;
 }
-
-static int copier_backslash(struct exp_ctx *ctx, char next)
-{
-    if (ctx->pos >= ctx->sz - 1)
-    {
-        if (!agrandir(ctx))
-            return 0;
-    }
-    ctx->res[ctx->pos] = next;
-    ctx->pos = ctx->pos + 1;
-    return 1;
-}
-
-static int exp_backslash_dquotes(const char *word, size_t *i,
-                                 struct exp_ctx *ctx)
-{
-    char next = 0;
-
-    *i = *i + 1;
-    if (!word[*i])
-        return copier_backslash(ctx, '\\');
-
-    next = word[*i];
-
-    if (next == '$' || next == '`' || next == '"' || next == '\\')
-    {
-        *i = *i + 1;
-        return copier_backslash(ctx, next);
-    }
-
-    if (next == '\n')
-    {
-        *i = *i + 1;
-        return 1;
-    }
-
-    return copier_backslash(ctx, '\\');
-}
-
-static int exp_backslash_normal(const char *word, size_t *i,
-                                struct exp_ctx *ctx)
-{
-    char next = 0;
-
-    *i = *i + 1;
-    if (!word[*i])
-        return copier_backslash(ctx, '\\');
-
-    next = word[*i];
-
-    if (next == '\n')
-    {
-        *i = *i + 1;
-        return 1;
-    }
-
-    *i = *i + 1;
-    return copier_backslash(ctx, next);
-}
-
 static int copier_char(struct exp_ctx *ctx, char c)
 {
     if (ctx->pos >= ctx->sz - 1)
@@ -617,80 +551,11 @@ static char *expand_squotes(const char *word)
     return result;
 }
 
-static int boucle_squotes(const char *word, size_t *idx, struct exp_ctx *ctx)
-{
-    *idx = *idx + 1;
-
-    while (word[*idx] && word[*idx] != '\'')
-    {
-        if (!copier_char(ctx, word[*idx]))
-            return 0;
-        *idx = *idx + 1;
-    }
-
-    if (word[*idx] == '\'')
-        *idx = *idx + 1;
-    return 1;
-}
-
-static int traiter_squote(struct exp_params *p, const char *word, size_t *idx)
-{
-    if (!boucle_squotes(word, idx, p->ctx))
-        return 0;
-    return 1;
-}
-
-static int traiter_dquote(struct exp_params *p, size_t *idx)
-{
-    p->in_dquotes = !p->in_dquotes;
-    *idx = *idx + 1;
-    return 1;
-}
-
-static int traiter_backslash(struct exp_params *p, const char *word,
-                             size_t *idx)
-{
-    if (p->in_dquotes)
-        return exp_backslash_dquotes(word, idx, p->ctx);
-    return exp_backslash_normal(word, idx, p->ctx);
-}
-
-static int traiter_char_normal(struct exp_params *p, char c, size_t *idx)
-{
-    if (!copier_char(p->ctx, c))
-        return 0;
-    *idx = *idx + 1;
-    return 1;
-}
-
 static int boucle_expansion(struct exp_params *p, const char *word, size_t *idx)
 {
-    p->in_dquotes = 0;
-
     while (word[*idx])
     {
         char c = word[*idx];
-
-        if (c == '\'' && !p->in_dquotes)
-        {
-            if (!traiter_squote(p, word, idx))
-                return 0;
-            continue;
-        }
-
-        if (c == '"')
-        {
-            if (!traiter_dquote(p, idx))
-                return 0;
-            continue;
-        }
-
-        if (c == '\\')
-        {
-            if (!traiter_backslash(p, word, idx))
-                return 0;
-            continue;
-        }
 
         if (c == '$')
         {
@@ -699,8 +564,10 @@ static int boucle_expansion(struct exp_params *p, const char *word, size_t *idx)
             continue;
         }
 
-        if (!traiter_char_normal(p, c, idx))
+        if (!copier_char(p->ctx, c))
             return 0;
+
+        *idx += 1;
     }
     return 1;
 }
@@ -737,6 +604,8 @@ char *expand(struct parser *parser, struct special *spe, const char *word)
         return NULL;
     }
     ctx.res[ctx.pos] = '\0';
+    //fprintf(stderr, "[EXPAND] result=\"%s\"\n", ctx.res);
+
     return ctx.res;
 }
 
