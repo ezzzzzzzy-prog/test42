@@ -1,26 +1,62 @@
-/*#include <stdio.h>
-#include <stdlib.h>
+#include <assert.h>
 #include <string.h>
-#include "../../src/lexer.h"
+
 #include "../../src/io_backend.h"
+#include "../../src/lexer.h"
 
-int main(int argc, char **argv)
+int main(void)
 {
-        if (io_backend_init(argc,argv) <0)
-                return 1;
-        struct lexer *l = new_lex();
-        struct token *t;
-        printf("%-20s | %-10s | %s\n", "Type du Token", "Longueur", "Aperçu");
+    char *argv[] = { "42sh", "-c", "if echo hello; fi", NULL };
+    int argc = 3;
 
-        while((t = pop(l))->type != TOK_EOF)
-        {
-                printf("%-20d | %-10zu | %.20s...\n", t->type, t->val ? strlen(t->val) : 0, t->val ? t->val : "");
-                free_tok(t);
-        }
-        printf("Fin du fichier atteinte avec succes.\n");
-        free_tok(t);
-        lexer_free(l);
-        io_backend_close();
-        return 0;
+    assert(io_backend_init(argc, argv) == 0);
+    struct lexer *lex = new_lex();
+    assert(lex);
+
+    struct token *tok;
+
+    // if
+    tok = pop(lex);
+    assert(tok);
+    assert(tok->type == TOK_IF);
+    free_tok(tok);
+
+    // echo
+    tok = pop(lex);
+    assert(tok);
+    assert(tok->type == TOK_WORD);
+    assert(tok->val);
+    assert(strcmp(tok->val, "echo") == 0);
+    free_tok(tok);
+
+    // hello
+    tok = pop(lex);
+    assert(tok);
+    assert(tok->type == TOK_WORD);
+    assert(tok->val);
+    assert(strcmp(tok->val, "hello") == 0);
+    free_tok(tok);
+
+    // ;
+    tok = pop(lex);
+    assert(tok);
+    assert(tok->type == TOK_SEMI);
+    free_tok(tok);
+
+    // fi
+    tok = pop(lex);
+    assert(tok);
+    assert(tok->type == TOK_FI);
+    free_tok(tok);
+
+    // EOF
+    tok = pop(lex);
+    assert(tok);
+    assert(tok->type == TOK_EOF);
+    free_tok(tok);
+
+    lexer_free(lex);
+    io_backend_close();
+
+    return 0;
 }
-*/

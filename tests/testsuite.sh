@@ -1,14 +1,34 @@
 #!/bin/sh
 
+
+COVERAGE_MODE=0
+if [ "${COVERAGE:-}" = "yes" ]; then
+    COVERAGE_MODE=1
+fi
 if [ -z "${BIN_PATH:-}" ]; then
     echo "[ERROR] BIN_PATH is not set" >&2
     exit 0
 fi
-
 TEST_ROOT="test_func"
-
 TOTAL=0
+TOTAL_C=0
 PASS=0
+PASS_C=0
+
+if [ "$COVERAGE_MODE" -eq 1 ]; then
+    echo "[INFO] Running unit tests" >&2
+    for unit in tests/test_unitaires/test_*; do
+        [ -x "$unit" ] || continue
+        TOTAL_C=$((TOTAL_C + 1))
+
+        if timeout 2 "$unit"; then
+            PASS_C=$((PASS_C + 1))
+        else
+            echo "[FAIL] $unit" >&2
+        fi
+    done
+fi
+
 
 for dir in "$TEST_ROOT"/*; do
     [ -d "$dir" ] || continue
@@ -78,9 +98,8 @@ for dir in "$TEST_ROOT"/*; do
     rm -f "$out_tmp"
     rm -f "$err_tmp"
 done
-
-if [ "$TOTAL" -eq 0 ]; then
-    RESULT=0
+if [ "$COVERAGE_MODE" -eq 1 ]; then
+    RESULT=$(( (PASS * 70 + PASS_C * 30) / (TOTAL + TOTAL_C) ))
 else
     RESULT=$((PASS * 100 / TOTAL))
 fi

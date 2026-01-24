@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "expansion.h"
-#include "special.h"
-#include "parser.h"
+#include "../../src/expansion.h"
+#include "../../src/special.h"
+#include "../../src/parser.h"
 
 int ok = 0;
 int total = 0;
