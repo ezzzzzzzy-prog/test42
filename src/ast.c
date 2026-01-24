@@ -78,7 +78,7 @@ void ast_free(struct ast *ast)
         ast_free(a_if->condition);
         ast_free(a_if->then_body);
         ast_free(a_if->else_body);
-        break
+        break;
     }
     default:
         break;

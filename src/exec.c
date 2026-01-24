@@ -29,9 +29,14 @@ static int exec_command(char **argv)
     if (is_builtin(argv[0]))
     {
       //  fprintf(stderr, "[EXEC_COMMAND] builtin '%s'\n", argv[0]);
-        int r = execute_builtin(argv, g_parser);
+         int ret = execute_builtin(argv, g_parser);
+        if (g_parser && g_parser->exit)
+            _exit(g_parser->ex_code);
+        return ret;
+        
+        //int r = execute_builtin(argv, g_parser);
          //fprintf(stderr,"[EXEC_COMMAND] builtin return=%d exit=%d ex_code=%d\n",r,g_parser->exit,g_parser->ex_code);
-        return r;
+        //return r;
     }
     char **expanded_argv = malloc(sizeof(char *) * 64);
     if (!expanded_argv)
@@ -613,6 +618,37 @@ static int exec_redirection(struct ast *ast)
 }
 static int exec_subshell(struct ast *ast)
 {
+    struct ast_subshell *s = (struct ast_subshell *)ast;
+
+    pid_t pid = fork();
+    if (pid < 0)
+        return 1;
+
+    if (pid == 0)
+    {
+        int saved_exit = g_parser->exit;
+        int saved_code = g_parser->ex_code;
+
+        g_parser->exit = 0;
+
+        int status = exec_ast(s->body);
+        fflush(stdout);
+
+        g_parser->exit = saved_exit;
+        g_parser->ex_code = saved_code;
+
+        _exit(status);
+    }
+
+    int status;
+    waitpid(pid, &status, 0);
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+    return 1;
+}
+
+/*static int exec_subshell(struct ast *ast)
+{
     //fprintf(stderr, "[SUBSHELL] enter\n");
     struct ast_subshell *s = (struct ast_subshell *)ast;
     // child
@@ -632,9 +668,9 @@ static int exec_subshell(struct ast *ast)
         _exit(status);
 
        // execute whats in paran or brack
-        /*int status = exec_ast(s->body);
-        fflush(stdout);
-        _exit(status);*/
+        //int status = exec_ast(s->body);
+        //fflush(stdout);
+        //_exit(status);
     }
     // exit code returns
     int status;
@@ -644,7 +680,7 @@ static int exec_subshell(struct ast *ast)
         return WEXITSTATUS(status);
     return 1;
 }
-
+*/
 int exec_ast(struct ast *ast)
 {
 
