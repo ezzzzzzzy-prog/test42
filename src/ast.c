@@ -79,6 +79,12 @@ static void free_ast_subshell(struct ast_subshell *s)
     ast_free(s->body);
 }
 
+static void free_ast_function(struct ast_function *f)
+{
+	free(f->name);
+	ast_free(f->body);
+}
+
 static void ast_free_switch1(struct ast *ast)
 {
     switch (ast->type)
@@ -126,6 +132,9 @@ static void ast_free_switch2(struct ast *ast)
     case AST_SUBSHELL:
         free_ast_subshell((struct ast_subshell *)ast);
         break;
+    case AST_FUNCTION:
+    	free_ast_function((struct ast_function *)ast);
+	break;
     case AST_BREAK:
     case AST_CONTINUE:
         break;

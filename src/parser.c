@@ -29,7 +29,7 @@ static void parser_consume(struct parser *parser)
 static int is_list_end(enum type t)
 {
     return t == TOK_THEN || t == TOK_ELSE || t == TOK_ELIF || t == TOK_FI
-        || t == TOK_EOF;
+        || t == TOK_EOF  || t == TOK_DO || t == TOK_DONE || t == TOK_SUB_RB;
 }
 
 struct parser *new_parse(void)
@@ -41,9 +41,12 @@ struct parser *new_parse(void)
     p->lex = new_lex();
     p->curr_tok = pop(p->lex);
     p->var = NULL;
+    p->func = NULL;
+    p->spe = NULL;
     p->exit = 0;
     p->ex_code = 0;
     p->last_code = 0;
+    p->parse_error = 0;
     return p;
 }
 
@@ -58,6 +61,18 @@ void free_variable(struct variable *var)
         var = v;
     }
 }
+
+void free_function(struct function *func)
+{
+        while(func)
+        {
+                struct function *f = func->next;
+                free(func->name);
+                ast_free(func->body);
+                free(func);
+                func = f;
+        }
+}
 void parser_free(struct parser *parser)
 {
     if (!parser)
@@ -66,6 +81,7 @@ void parser_free(struct parser *parser)
         free_tok(parser->curr_tok);
     lexer_free(parser->lex);
     free_variable(parser->var);
+    free_function(parser->func);
     free(parser);
 }
 
@@ -93,6 +109,53 @@ void add_var(struct parser *parser, const char *name, const char *value)
     var->value = strdup(value);
     var->next = parser->var;
     parser->var = var;
+}
+
+
+void add_function(struct parser *parser, char *name, struct ast *body)
+{
+        if(!parser || !name || !body)
+        {
+                return;
+        }
+        struct function *f = parser->func;
+        while(f)
+        {
+                if(strcmp(f->name, name) == 0)
+                {
+                        ast_free(f->body);
+                        f->body = body;
+                        return;
+                }
+                f = f->next;
+        }
+        struct function *new_func = malloc(sizeof(*new_func));
+        if(!new_func)
+        {
+                return;
+        }
+        new_func->name = strdup(name);
+        new_func->body = body;
+        new_func->next = parser->func;
+        parser->func = new_func;
+}
+
+struct function *get_function(struct parser *parser, const char *name)
+{
+        if(!parser || !name)
+        {
+                return NULL;
+        }
+        struct function *f = parser->func;
+        while(f)
+        {
+                if(strcmp(f->name,name) == 0)
+                {
+                        return f;
+                }
+                f = f->next;
+        }
+        return NULL;
 }
 
 static int parse_assignment(struct parser *parser)
@@ -316,7 +379,7 @@ static struct ast **init_pipeline_cmds(size_t *capacity, size_t *count)
     return cmds;
 }
 
-static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
+/*static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
                                size_t *count, size_t *capacity)
 {
     struct ast *cmd = parse_command(parser);
@@ -346,8 +409,50 @@ static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
         (*cmds)[(*count)++] = cmd;
     }
     return 1;
-}
+}*/
 
+
+static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
+                               size_t *count, size_t *capacity)
+{
+    struct ast *cmd = parse_command(parser);
+    if (!cmd)
+    {
+        return 0;
+    }
+    (*cmds)[(*count)++] = cmd;
+    while (parser->curr_tok && parser->curr_tok->type == TOK_PIPE)
+    {
+        parser_consume(parser);
+        while(parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+        {
+                parser_consume(parser);
+        }
+        if(!parser->curr_tok || parser->curr_tok->type == TOK_EOF || parser->curr_tok->type == TOK_PIPE || parser->curr_tok->type == TOK_SEMI || parser->curr_tok->type == TOK_AND || parser->curr_tok->type == TOK_OR)
+        {
+                fprintf(stderr, "parse error \n");
+                return 0;
+        }
+        cmd = parse_command(parser);
+        if (!cmd)
+        {
+                fprintf(stderr, "parse error\n");
+            return 0;
+        }
+        if (*count == *capacity)
+        {
+            *capacity *= 2;
+            struct ast **tmp = realloc(*cmds, sizeof(**cmds) * (*capacity));
+            if (!tmp)
+            {
+                return 0;
+            }
+            *cmds = tmp;
+        }
+        (*cmds)[(*count)++] = cmd;
+    }
+    return 1;
+}
 static struct ast *build_pipeline(struct ast **cmds, size_t count, int neg)
 {
     struct ast *result;
@@ -369,6 +474,12 @@ static struct ast *build_pipeline(struct ast **cmds, size_t count, int neg)
 
 struct ast *parse_pipeline(struct parser *parser)
 {
+        if(parser->curr_tok && parser->curr_tok->type == TOK_PIPE)
+        {
+                fprintf(stderr, "parse error\n");
+                parser->parse_error = 1;
+                return NULL;
+        }
     int neg = parse_pipeline_neg(parser);
     size_t capacity;
     size_t count;
@@ -459,7 +570,7 @@ static struct ast **init_cmds(struct ast *first, size_t *cap, size_t *count)
     return cmds;
 }
 
-static int parse_compound_sql(struct parser *parser, struct ast ***cmds,
+/*static int parse_compound_sql(struct parser *parser, struct ast ***cmds,
                               size_t *count, size_t *cap)
 {
     while (parser->curr_tok
@@ -486,14 +597,55 @@ static int parse_compound_sql(struct parser *parser, struct ast ***cmds,
         }
     }
     return 1;
+}*/
+
+static int parse_compound_sql(struct parser *parser, struct ast ***cmds,
+                              size_t *count, size_t *cap)
+{
+    while (parser->curr_tok
+           && (parser->curr_tok->type == TOK_SEMI
+               || parser->curr_tok->type == TOK_NEWLINE))
+    {
+        parser_consume(parser);
+        while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+        {
+            parser_consume(parser);
+        }
+        if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF)
+        {
+            break;
+        }
+        struct ast *next = parse_command(parser);
+        if (!next)
+        {
+            break;
+        }
+        if (!add_ast(cmds, count, cap, next))
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
 struct ast *parse_compound_list(struct parser *parser)
 {
     skip_newlines(parser);
+    if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF)
+    {
+        return create_cmd(NULL);
+    }
+    if (is_list_end(parser->curr_tok->type))
+    {
+        return create_cmd(NULL);
+    }
     struct ast *first = parse_and_or(parser);
     if (!first)
     {
+        if (!parser->curr_tok || is_list_end(parser->curr_tok->type))
+        {
+            return create_cmd(NULL);
+        }
         return NULL;
     }
     size_t cap;
@@ -504,7 +656,6 @@ struct ast *parse_compound_list(struct parser *parser)
         ast_free(first);
         return NULL;
     }
-
     if (!parse_compound_sql(parser, &cmds, &count, &cap))
     {
         goto error;
@@ -515,13 +666,13 @@ struct ast *parse_compound_list(struct parser *parser)
         return first;
     }
     return create_list(cmds, count);
-
 error:
     for (size_t i = 0; i < count; i++)
         ast_free(cmds[i]);
     free(cmds);
     return NULL;
 }
+
 
 static struct ast *parse_else(struct parser *parser)
 {
@@ -532,32 +683,44 @@ static struct ast *parse_else(struct parser *parser)
     if (parser->curr_tok->type == TOK_ELIF)
     {
         parser_consume(parser);
+        if (!parser->curr_tok || parser->curr_tok->type == TOK_THEN)
+        {
+            fprintf(stderr, "parse error: condition in elif\n");
+            parser->parse_error = 1;
+            return NULL;
+        }
         struct ast *elif_cond = parse_compound_list(parser);
         if (!elif_cond)
         {
+            fprintf(stderr, "parse error: condition in elif\n");
+            parser->parse_error = 1;
             return NULL;
         }
         if (!parser->curr_tok || parser->curr_tok->type != TOK_THEN)
         {
             ast_free(elif_cond);
+            fprintf(stderr, "parse error: then in elif\n");
+            parser->parse_error = 1;
             return NULL;
         }
         parser_consume(parser);
-
         struct ast *elif_body = parse_compound_list(parser);
         if (!elif_body)
         {
-            ast_free(elif_cond);
-            return NULL;
+            elif_body = create_cmd(NULL);
         }
-
         struct ast *next_else = parse_else(parser);
         return create_if(elif_cond, elif_body, next_else);
     }
     if (parser->curr_tok->type == TOK_ELSE)
     {
         parser_consume(parser);
-        return parse_compound_list(parser);
+        struct ast *else_body = parse_compound_list(parser);
+        if (!else_body)
+        {
+            else_body = create_cmd(NULL);
+        }
+        return else_body;
     }
     return NULL;
 }
@@ -569,22 +732,35 @@ struct ast *parse_rule_if(struct parser *parser)
         return NULL;
     }
     parser_consume(parser);
+    while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+    {
+        parser_consume(parser);
+    }
+    if (!parser->curr_tok || parser->curr_tok->type == TOK_THEN)
+    {
+        fprintf(stderr, "parse error: condition in if\n");
+        parser->parse_error = 1;
+        return NULL;
+    }
     struct ast *condition = parse_compound_list(parser);
     if (!condition)
     {
+        fprintf(stderr, "parse error: condition in if\n");
+        parser->parse_error = 1;
         return NULL;
     }
     if (!parser->curr_tok || parser->curr_tok->type != TOK_THEN)
     {
         ast_free(condition);
+        fprintf(stderr, "parse error: then in if\n");
+        parser->parse_error = 1;
         return NULL;
     }
     parser_consume(parser);
     struct ast *then_body = parse_compound_list(parser);
     if (!then_body)
     {
-        ast_free(condition);
-        return NULL;
+        then_body = create_cmd(NULL);
     }
     struct ast *else_body = parse_else(parser);
     if (!parser->curr_tok || parser->curr_tok->type != TOK_FI)
@@ -592,6 +768,8 @@ struct ast *parse_rule_if(struct parser *parser)
         ast_free(condition);
         ast_free(then_body);
         ast_free(else_body);
+        fprintf(stderr, "parse error :fi in if\n");
+        parser->parse_error = 1;
         return NULL;
     }
     parser_consume(parser);
@@ -601,9 +779,17 @@ struct ast *parse_rule_if(struct parser *parser)
 struct ast *parser_input(struct parser *parser)
 {
     if (!parser)
+    {
         return NULL;
+    }
+    while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+    {
+        parser_consume(parser);
+    }
     if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF)
+    {
         return NULL;
+    }
     return parse_compound_list(parser);
 }
 
@@ -617,11 +803,15 @@ struct ast *parse_rule_while(struct parser *parser)
     struct ast *condition = parse_compound_list(parser);
     if (!condition)
     {
+         fprintf(stderr, "parse error: condition in while\n");
+        parser->parse_error = 1;
         return NULL;
     }
     if (!parser->curr_tok || parser->curr_tok->type != TOK_DO)
     {
         ast_free(condition);
+        fprintf(stderr, "parse error: do in while\n");
+        parser->parse_error = 1;
         return NULL;
     }
     parser_consume(parser);
@@ -629,17 +819,22 @@ struct ast *parse_rule_while(struct parser *parser)
     if (!body)
     {
         ast_free(condition);
+        fprintf(stderr, "parse error: body in while\n");
+        parser->parse_error = 1;
         return NULL;
     }
     if (!parser->curr_tok || parser->curr_tok->type != TOK_DONE)
     {
         ast_free(condition);
         ast_free(body);
+        fprintf(stderr, "parse error: done in while\n");
+        parser->parse_error = 1;
         return NULL;
     }
     parser_consume(parser);
     return create_while(condition, body);
 }
+
 
 struct ast *parse_rule_until(struct parser *parser)
 {
@@ -651,11 +846,15 @@ struct ast *parse_rule_until(struct parser *parser)
     struct ast *condition = parse_compound_list(parser);
     if (!condition)
     {
+            fprintf(stderr, "parse error: condition in until\n");
+        parser->parse_error = 1;
         return NULL;
     }
     if (!parser->curr_tok || parser->curr_tok->type != TOK_DO)
     {
         ast_free(condition);
+         fprintf(stderr, "parse error: do in until\n");
+        parser->parse_error = 1;
         return NULL;
     }
     parser_consume(parser);
@@ -663,12 +862,16 @@ struct ast *parse_rule_until(struct parser *parser)
     if (!body)
     {
         ast_free(condition);
+        fprintf(stderr, "parse error: body in until\n");
+        parser->parse_error = 1;
         return NULL;
     }
     if (!parser->curr_tok || parser->curr_tok->type != TOK_DONE)
     {
         ast_free(condition);
         ast_free(body);
+        fprintf(stderr, "parse error: done in until\n");
+        parser->parse_error = 1;
         return NULL;
     }
     parser_consume(parser);
@@ -701,6 +904,7 @@ static char *parse_for_var(struct parser *parser)
     return var;
 }
 
+
 static char **parse_for_words(struct parser *parser)
 {
     if (!parser->curr_tok || parser->curr_tok->type != TOK_IN)
@@ -711,14 +915,43 @@ static char **parse_for_words(struct parser *parser)
     size_t cap = 8;
     size_t count = 0;
     char **words = malloc(sizeof(char *) * cap);
+    if (!words)
+    {
+        return NULL;
+    }
     while (parser->curr_tok && parser->curr_tok->type == TOK_WORD)
     {
+        char *expanded = expand(parser, parser->spe, parser->curr_tok->val);
+        if (!expanded)
+        {
+            expanded = strdup(parser->curr_tok->val);
+            if (!expanded)
+            {
+                for (size_t i = 0; i < count; i++)
+		{
+                    free(words[i]);
+		}
+                free(words);
+                return NULL;
+            }
+        }
         if (count + 1 >= cap)
         {
             cap *= 2;
-            words = realloc(words, sizeof(char *) * cap);
+            char **tmp = realloc(words, sizeof(char *) * cap);
+            if (!tmp)
+            {
+                free(expanded);
+                for (size_t i = 0; i < count; i++)
+		{
+                    free(words[i]);
+		}
+                free(words);
+                return NULL;
+            }
+            words = tmp;
         }
-        words[count++] = strdup(parser->curr_tok->val);
+        words[count++] = expanded;
         parser_consume(parser);
     }
     words[count] = NULL;
@@ -765,22 +998,35 @@ struct ast *parse_rule_for(struct parser *parser)
     char *var = parse_for_var(parser);
     if (!var)
     {
+            fprintf(stderr, "parse error near 'for'\n");
+        parser->parse_error = 1;
         return NULL;
     }
     char **words = NULL;
     if (parser->curr_tok && parser->curr_tok->type == TOK_IN)
     {
         words = parse_for_words(parser);
+        if(!words)
+        {
+                free(var);
+            fprintf(stderr, "parse error in for loop\n");
+            parser->parse_error = 1;
+            return NULL;
+        }
     }
     if (!skip_semi_newline(parser))
     {
         free_for_parts(var, words);
+         fprintf(stderr, "parse error:newline in for\n");
+        parser->parse_error = 1;
         return NULL;
     }
     struct ast *body = parse_for_body(parser);
     if (!body)
     {
         free_for_parts(var, words);
+        fprintf(stderr, "parse error: do/done in for\n");
+        parser->parse_error = 1;
         return NULL;
     }
     return create_for(var, words, body);
@@ -873,7 +1119,48 @@ static struct ast *parse_br_ct(struct parser *parser)
     }
     return NULL;
 }
+static struct ast *parse_function(struct parser *parser)
+{
+    if (!parser || !parser->curr_tok || parser->curr_tok->type != TOK_WORD)
+        return NULL;
 
+    struct token *next = peek(parser->lex);
+    if (!next || next->type != TOK_SUB_LP)
+        return NULL;
+    char *name = strdup(parser->curr_tok->val);
+    parser_consume(parser);
+    parser_consume(parser);
+    if (!parser->curr_tok || parser->curr_tok->type != TOK_SUB_RP)
+    {
+        free(name);
+        fprintf(stderr, "parse error: ')' in function\n");
+        parser->parse_error = 1;
+        return NULL;
+    }
+    parser_consume(parser);
+    while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
+    {
+        parser_consume(parser);
+    }
+    struct ast *body = NULL;
+    if (parser->curr_tok && (parser->curr_tok->type == TOK_SUB_LP || parser->curr_tok->type == TOK_SUB_LB))
+    {
+        body = parse_subshell(parser);
+    }
+    else
+    {
+        body = parse_choose(parser);
+    }
+
+    if (!body)
+    {
+        free(name);
+        fprintf(stderr, "parse error:body in function\n");
+        parser->parse_error = 1;
+        return NULL;
+    }
+    return create_function(name, body);
+}
 static struct ast *parse_simple_with_redir(struct parser *parser)
 {
     struct ast *cmd = parse_simple_command(parser);
@@ -892,7 +1179,6 @@ static struct ast *parse_simple_with_redir(struct parser *parser)
     }
     return cmd;
 }
-
 static struct ast *parse_command(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
@@ -901,17 +1187,15 @@ static struct ast *parse_command(struct parser *parser)
     struct ast *res = parse_choose(parser);
     if (res)
     {
-        if (!res)
-        {
-            fprintf(stderr, "syntax error\n");
-            return create_cmd(NULL);
-        }
         return res;
     }
-
     res = parse_br_ct(parser);
     if (res)
         return res;
-
+    res = parse_function(parser);
+    if(res)
+    {
+            return res;
+    }
     return parse_simple_with_redir(parser);
 }

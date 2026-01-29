@@ -77,8 +77,6 @@ static void echo_print(const char *s, int f)
                 putchar('\t');
             else if (s[i] == '\\')
                 putchar('\\');
-            else if (s[i] == '"')
-                putchar('"');
             else
             {
                 putchar('\\');
@@ -92,11 +90,11 @@ static void echo_print(const char *s, int f)
     }
 }
 
-static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
+/*static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
 {
     while (argv[*idx] && argv[*idx][0] == '-')
     {
-        if (!strcmp(argv[*idx], "-n"))
+        	if (!strcmp(argv[*idx], "-n"))
         {
             *n_flag = 1;
             *idx = *idx + 1;
@@ -115,7 +113,36 @@ static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
             break;
     }
     return 0;
+}*/
+
+
+static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
+{
+    while (argv[*idx] && argv[*idx][0] == '-' && argv[*idx][1])
+    {
+        char *arg = argv[*idx];
+        for (int i = 1; arg[i]; i++)
+        {
+            if (arg[i] == 'n')
+	    {
+                *n_flag = 1;
+	    }
+            else if (arg[i] == 'e')
+	    {
+                *e_flag = 1;
+	    }
+            else if (arg[i] == 'E')
+	    {
+                *e_flag = 0;
+	    }
+            else
+                return 0;
+	}
+        (*idx)++;
+    }
+    return 0;
 }
+
 
 /*
 static void print_echo_arg(char **argv, int idx, struct parser *parser, int
@@ -164,18 +191,33 @@ static int builtin_echo(char **argv, struct parser *parser)
     return 0;
 }
 
+
 static int builtin_break(char **argv)
 {
-    if (argv && argv[0])
-        return 0;
-    return EXEC_BREAK;
+    int n = 1;
+    if(argv[1])
+    {
+            n = string_to_int(argv[1]);
+            if( n <= 0)
+            {
+                    n = 1;
+            }
+    }
+    return EXEC_BREAK + n - 1;
 }
 
 static int builtin_continue(char **argv)
 {
-    if (argv && argv[0])
-        return 0;
-    return EXEC_CONTINUE;
+    int n = 1 ;
+    if(argv[1])
+    {
+            n = string_to_int(argv[1]);
+            if(n<=0)
+            {
+                    n = 1;
+            }
+    }
+    return EXEC_CONTINUE + n - 1;
 }
 
 static int builtin_true(char **argv)
@@ -241,32 +283,51 @@ static int builtin_export(char **argv, struct parser *parser)
     {
         return 0;
     }
-    char *arg = argv[1];
-    char *equal = strchr(arg, '=');
-    char *name;
-    char *value;
-    if (equal)
+    for( int i = 1; argv[i] ; i++)
     {
-        *equal = '\0';
-        name = arg;
-        value = equal + 1;
-    }
-    else
-    {
-        name = arg;
-        value = "";
-    }
-    add_var(parser, name, value);
-    struct variable *v = parser->var;
-    while (v)
-    {
-        if (strcmp(v->nom, name) == 0)
+        char *arg = argv[i];
+        char *equal = strchr(arg, '=');
+        char *name;
+        char *value;
+        if (equal)
         {
-            v->exported = 1;
-            setenv(name, value, 1);
-            break;
+                size_t name_len = equal - arg;
+                name = malloc(name_len + 1);
+                if(!name)
+                {
+                        return 1;
+                }
+                memcpy(name, arg, name_len);
+                name[name_len] = '\0';
+                value = equal + 1;
+                add_var(parser, name, value);
+                struct variable *v = parser->var;
+                while(v)
+                {
+                        if(strcmp(v->nom, name) == 0)
+                        {
+                                v->exported = 1;
+                                setenv(name, value, 1);
+                                break;
+                        }
+                        v = v->next;
+                }
+                free(name);
         }
-        v = v->next;
+        else
+        {
+                struct variable *v = parser->var;
+                while (v)
+                {
+                        if (strcmp(v->nom, name) == 0)
+                        {
+                                v->exported = 1;
+                                setenv(name, value, 1);
+                                break;
+                        }
+                        v = v->next;
+                }
+        }
     }
     return 0;
 }

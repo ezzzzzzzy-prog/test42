@@ -16,7 +16,8 @@ enum ast_type
     AST_OR,
     AST_PIPELINE,
     AST_REDIRECTION,
-    AST_SUBSHELL
+    AST_SUBSHELL,
+    AST_FUNCTION
 };
 
 enum exec_status
@@ -120,6 +121,14 @@ struct ast_subshell
     struct ast *body;
 };
 
+struct ast_function
+{
+    struct ast base;
+    char *name;
+    struct ast *body;
+};
+
+
 struct ast *create_cmd(char **words);
 struct ast *create_list(struct ast **cmds, size_t count);
 struct ast *create_if(struct ast *cond, struct ast *then_body,
@@ -136,6 +145,7 @@ struct ast *create_for(char *var, char **words, struct ast *body);
 struct ast *create_subshell(struct ast *body);
 struct ast *create_break(void);
 struct ast *create_continue(void);
+struct ast *create_function(char *name, struct ast *body);
 void ast_free(struct ast *ast);
 
 #endif /* AST_H */

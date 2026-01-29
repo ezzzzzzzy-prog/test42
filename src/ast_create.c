@@ -84,3 +84,17 @@ struct ast *create_subshell(struct ast *body)
     s->body = body;
     return (struct ast *)s;
 }
+
+
+struct ast *create_function(char *name,struct ast *body)
+{
+        struct ast_function *f = malloc(sizeof(*f));
+        if(!f)
+        {
+                return NULL;
+        }
+        f->base.type = AST_FUNCTION;
+        f->name = name;
+        f->body = body;
+        return (struct ast *)f;
+}

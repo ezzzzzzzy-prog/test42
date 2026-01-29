@@ -17,7 +17,7 @@
 static int exec_redirection(struct ast *ast);
 struct parser *g_parser = NULL;
 
-static int exec_command(char **argv)
+/*static int exec_command(char **argv)
 {
     if (!argv || !argv[0])
         return 0;
@@ -72,7 +72,108 @@ static int exec_command(char **argv)
         return WEXITSTATUS(status);
 
     return 1;
+}*/
+
+static int run_func(struct function *f, char **av)
+{
+    if (!g_parser || !g_parser->spe || !f)
+    {
+        return 1;
+    }
+    char **save_args = g_parser->spe->args;
+    int save_nb = g_parser->spe->argc_count;   
+    int nb = 0;
+    while (av[nb])
+    {
+        nb++;
+    }
+    char **nargs = malloc(sizeof(char *) * (nb - 1));
+    for (int j = 1; j < nb; j++)
+    {
+        nargs[j - 1] = av[j];
+    }
+    g_parser->spe->args = nargs;
+    g_parser->spe->argc_count = nb - 1;
+    int res = exec_ast(f->body);    
+    g_parser->spe->args = save_args;
+    g_parser->spe->argc_count = save_nb;
+    free(nargs);
+    return res;
 }
+
+static int run_extern(char **av)
+{
+    char **exp = malloc(sizeof(char *) * 64);
+    int cnt = 0; 
+    for (int k = 0; av[k] && k < 63; k++)
+    {
+        char *e = expand(g_parser, g_parser->spe, av[k]);
+        exp[cnt++] = e ? e : strdup(av[k]);
+    }
+    exp[cnt] = NULL;    
+    pid_t p = fork();
+    if (p < 0)
+    {
+        perror("fork");
+        for (int k = 0; k < cnt; k++)
+	{
+            free(exp[k]);
+	}
+        free(exp);
+        return 1;
+    }
+    
+    if (p == 0)
+    {
+        execvp(av[0], av);
+        fprintf(stderr, "%s: not found\n", av[0]);
+        _exit(127);
+    }  
+    int st;
+    waitpid(p, &st, 0);
+    for (int k = 0; k < cnt; k++)
+        free(exp[k]);
+    free(exp);
+    return WIFEXITED(st) ? WEXITSTATUS(st) : 1;
+}
+
+static int exec_command(char **av)
+{
+    if (!av || !av[0])
+    {
+        return 0;
+    }
+    struct function *f = get_function(g_parser, av[0]);
+    if (f)
+    {
+        return run_func(f, av);
+    }
+    if (is_builtin(av[0]))
+    {
+        char **exp = malloc(sizeof(char *) * 64);
+        int cnt = 0;        
+        for (int k = 0; av[k] && k < 63; k++)
+        {
+            char *e = expand(g_parser, g_parser->spe, av[k]);
+            exp[cnt++] = e ? e : strdup(av[k]);
+        }
+        exp[cnt] = NULL;       
+        int res = execute_builtin(exp, g_parser);
+        for (int k = 0; k < cnt; k++)
+	{
+            free(exp[k]);
+	}
+        free(exp);       
+        if (g_parser && g_parser->exit)
+	{
+            _exit(g_parser->ex_code);
+	}
+        return res;
+    }    
+    return run_extern(av);
+}
+
+
 
 static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
                        int pipefd[2])
@@ -218,6 +319,7 @@ static int exec_if(struct ast *ast)
     return cond;
 }
 
+
 static int exec_until(struct ast *ast)
 {
     struct ast_until *u = (struct ast_until *)ast;
@@ -228,19 +330,34 @@ static int exec_until(struct ast *ast)
         if (status == 0)
             break;
         status = exec_ast(u->body);
-        if (status == EXEC_BREAK)
+        if (status >= EXEC_BREAK)
         {
-            status = 0;
-            break;
+                if(status == EXEC_BREAK)
+                {
+                        status = 0;
+                        break;
+                }
+                else
+                {
+                        return status - 1;
+                }
         }
-        if (status == EXEC_CONTINUE)
+        if (status >= EXEC_CONTINUE)
         {
-            status = 0;
-            continue;
+                if(status == EXEC_CONTINUE)
+                {
+                        status = 0;
+                        continue;
+                }
+                else
+                {
+                        return status - 1;
+                }
         }
     }
     return status;
 }
+
 
 static int exec_while(struct ast *ast)
 {
@@ -253,15 +370,29 @@ static int exec_while(struct ast *ast)
         if (status != 0)
             break;
         status = exec_ast(w->body);
-        if (status == EXEC_BREAK)
+        if (status >= EXEC_BREAK)
         {
-            status = 0;
-            break;
+                if(status == EXEC_BREAK)
+                {
+                        status = 0;
+                        break;
+                }
+                else
+                {
+                        return status - 1;
+                }
         }
-        if (status == EXEC_CONTINUE)
+        if (status >= EXEC_CONTINUE)
         {
-            status = 0;
-            continue;
+                if(status == EXEC_CONTINUE)
+                {
+                        status = 0;
+                        continue;
+                }
+                else
+                {
+                        return status - 1;
+                }
         }
     }
 
@@ -363,15 +494,37 @@ static int exec_for(struct ast *ast)
                 update(g_parser, res->var, res->words[i]);
             }
             status = exec_ast(res->body);
-            if (status == EXEC_BREAK)
+            if (status >= EXEC_BREAK)
             {
-                status = 0;
-                break;
+                    if(status == EXEC_BREAK)
+                    {
+                        status = 0;
+                        break;
+                    }
+                    else
+                    {
+                            if(g_parser)
+                            {
+                                    restore_before(g_parser, res->var, before_value,defined);
+                            }
+                            return status - 1;
+                    }
             }
             if (status == EXEC_CONTINUE)
             {
-                status = 0;
-                continue;
+                    if(status == EXEC_CONTINUE)
+                    {
+                        status = 0;
+                        continue;
+                    }
+                    else
+                    {
+                            if(g_parser)
+                            {
+                                    restore_before(g_parser, res->var, before_value, defined);
+                            }
+                            return status - 1;
+                    }
             }
         }
     }
@@ -559,6 +712,10 @@ int exec_ast(struct ast *ast)
         fflush(stdout);
         _exit(g_parser->ex_code);
     }
+    if (g_parser->parse_error)
+    {
+        return 2;
+    }
     if (!ast)
         return 0;
 
@@ -603,6 +760,15 @@ int exec_ast(struct ast *ast)
     }
     case AST_SUBSHELL: {
         return exec_subshell(ast);
+    }
+    case AST_FUNCTION:
+    {
+            struct ast_function *f = (struct ast_function *)ast;
+            if(g_parser)
+            {
+                    add_function(g_parser, f->name, f->body);
+            }
+            return 0;
     }
     default:
         return 0;
