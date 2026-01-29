@@ -82,7 +82,7 @@ static int run_func(struct function *f, char **av)
     }
     char **save_args = g_parser->spe->args;
     int save_nb = g_parser->spe->argc_count;   
-    int nb = 0;
+  int nb = 0;
     while (av[nb])
     {
         nb++;
@@ -126,7 +126,7 @@ static int run_extern(char **av)
     if (p == 0)
     {
         execvp(av[0], av);
-        fprintf(stderr, "%s: not found\n", av[0]);
+        fprintf(stderr, "not found\n");
         _exit(127);
     }  
     int st;

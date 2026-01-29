@@ -96,6 +96,7 @@ static struct token *simple_tok(int c)
 
 static struct token *pipe_tok(void)
 {
+	io_backend_next();
     if (io_backend_peek() == '|')
     {
         io_backend_next();
