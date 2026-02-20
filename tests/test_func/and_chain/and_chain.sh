@@ -1,0 +1,1 @@
+true && true && echo ok

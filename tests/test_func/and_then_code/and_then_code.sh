@@ -1,0 +1,2 @@
+false && echo yes
+echo $?
