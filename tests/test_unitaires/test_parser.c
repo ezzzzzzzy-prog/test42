@@ -1,40 +1,34 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../../src/ast.h"
-#include "../../src/io_backend.h"
-#include "../../src/lexer.h"
-#include "../../src/parser.h"
+#include "../../src/ast/ast.h"
+#include "../../src/io_backend/io_backend.h"
+#include "../../src/lexer/lexer.h"
+#include "../../src/parser/parser.h"
 
 int main(void)
 {
-    char *argv[] = { "42sh", "-c", "echo hello", NULL };
+    char *argv[] = { "minishell", "-c", "echo hello", NULL };
     int argc = 3;
 
     assert(io_backend_init(argc, argv) == 0);
 
-    struct lexer *lex = new_lex(NULL);
-    assert(lex);
-
-    struct parser *p = parser_new(lex);
+    struct parser *p = new_parse();
     assert(p);
 
-    struct ast *ast = parse_input(p);
+    struct ast *ast = parser_input(p);
     assert(ast);
     assert(ast->type == AST_COMMAND);
 
-    struct ast_command *cmd = (struct ast_command *)ast;
-
-    assert(cmd->argv);
-    assert(cmd->argv[0]);
-    assert(strcmp(cmd->argv[0], "echo") == 0);
-    assert(cmd->argv[1]);
-    assert(strcmp(cmd->argv[1], "hello") == 0);
-    assert(cmd->argv[2] == NULL);
+    assert(ast->data.cmd.words);
+    assert(ast->data.cmd.words[0]);
+    assert(strcmp(ast->data.cmd.words[0], "echo") == 0);
+    assert(ast->data.cmd.words[1]);
+    assert(strcmp(ast->data.cmd.words[1], "hello") == 0);
+    assert(ast->data.cmd.words[2] == NULL);
 
     ast_free(ast);
     parser_free(p);
-    lexer_free(lex);
     io_backend_close();
 
     return 0;

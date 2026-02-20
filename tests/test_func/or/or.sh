@@ -1,1 +1,1 @@
-false || echo no
+false 

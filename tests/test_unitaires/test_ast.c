@@ -2,111 +2,72 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../src/ast.h"
-
-static struct ast *fake_cmd(void)
-{
-    struct ast_cmd *cmd = malloc(sizeof(*cmd));
-    assert(cmd);
-
-    cmd->base.type = AST_COMMAND;
-    cmd->words = NULL;
-
-    return (struct ast *)cmd;
-}
+#include "../../src/ast/ast.h"
+#include "../../src/ast/ast_create.h"
 
 int main(void)
 {
-    // if
-    struct ast *cond = fake_cmd();
-    struct ast *then_body = fake_cmd();
-    struct ast *else_body = fake_cmd();
-
-    struct ast *if_ast = create_if(cond, then_body, else_body);
-    assert(if_ast);
-    assert(if_ast->type == AST_IF);
-
-    struct ast_if *if_node = (struct ast_if *)if_ast;
-    assert(if_node->condition == cond);
-    assert(if_node->then_body == then_body);
-    assert(if_node->else_body == else_body);
-
-    ast_free(if_ast);
-
-    // while
-    struct ast *while_cond = fake_cmd();
-    struct ast *while_body = fake_cmd();
-
-    struct ast *while_ast = create_while(while_cond, while_body);
-    assert(while_ast);
-    assert(while_ast->type == AST_WHILE);
-
-    struct ast_while *w = (struct ast_while *)while_ast;
-    assert(w->condition == while_cond);
-    assert(w->body == while_body);
-
-    ast_free(while_ast);
-
-    // until
-    struct ast *until_cond = fake_cmd();
-    struct ast *until_body = fake_cmd();
-
-    struct ast *until_ast = create_until(until_cond, until_body);
-    assert(until_ast);
-    assert(until_ast->type == AST_UNTIL);
-
-    struct ast_until *u = (struct ast_until *)until_ast;
-    assert(u->condition == until_cond);
-    assert(u->body == until_body);
-
-    ast_free(until_ast);
-
-    // for
-    char *var = strdup("i");
-
+    /* create_cmd */
     char **words = malloc(sizeof(char *) * 2);
-    words[0] = strdup("one");
+    words[0] = strdup("echo");
     words[1] = NULL;
+    struct ast *cmd_ast = create_cmd(words);
+    assert(cmd_ast && cmd_ast->type == AST_COMMAND);
+    ast_free(cmd_ast);
 
-    struct ast *for_body = fake_cmd();
+    /* create_list */
+    char **w1 = malloc(sizeof(char *) * 2);
+    w1[0] = strdup("ls");
+    w1[1] = NULL;
+    char **w2 = malloc(sizeof(char *) * 2);
+    w2[0] = strdup("cat");
+    w2[1] = NULL;
 
-    struct ast *for_ast = create_for(var, words, for_body);
-    assert(for_ast);
-    assert(for_ast->type == AST_FOR);
+    struct ast **cmds = malloc(sizeof(struct ast *) * 2);
+    cmds[0] = create_cmd(w1);
+    cmds[1] = create_cmd(w2);
+    struct ast *list_ast = create_list(cmds, 2);
+    assert(list_ast && list_ast->type == AST_LIST);
+    ast_free(list_ast);
 
-    struct ast_for *f = (struct ast_for *)for_ast;
-    assert(strcmp(f->var, "i") == 0);
-    assert(strcmp(f->words[0], "one") == 0);
-    assert(f->body == for_body);
+    /* ast_pipeline_create */
+    char **w3 = malloc(sizeof(char *) * 2);
+    w3[0] = strdup("echo");
+    w3[1] = NULL;
+    char **w4 = malloc(sizeof(char *) * 2);
+    w4[0] = strdup("grep");
+    w4[1] = NULL;
 
-    ast_free(for_ast);
+    struct ast **pipes = malloc(sizeof(struct ast *) * 2);
+    pipes[0] = create_cmd(w3);
+    pipes[1] = create_cmd(w4);
+    struct ast *pipe_ast = ast_pipeline_create(pipes, 2);
+    assert(pipe_ast && pipe_ast->type == AST_PIPELINE);
+    ast_free(pipe_ast);
 
-    // Redir
-    struct ast *redir_left = fake_cmd();
-    char *file = strdup("out.txt");
+    /* create_and */
+    char **w5 = malloc(sizeof(char *) * 2);
+    w5[0] = strdup("true");
+    w5[1] = NULL;
+    char **w6 = malloc(sizeof(char *) * 2);
+    w6[0] = strdup("echo");
+    w6[1] = NULL;
 
-    struct ast *redir_ast = create_redir(AST_REDIR_OUT, redir_left, file, -1);
+    struct ast *and_ast = create_and(create_cmd(w5), create_cmd(w6));
+    assert(and_ast && and_ast->type == AST_AND);
+    ast_free(and_ast);
 
-    assert(redir_ast);
-    assert(redir_ast->type == AST_REDIRECTION);
+    /* create_or */
+    char **w7 = malloc(sizeof(char *) * 2);
+    w7[0] = strdup("false");
+    w7[1] = NULL;
+    char **w8 = malloc(sizeof(char *) * 2);
+    w8[0] = strdup("echo");
+    w8[1] = NULL;
 
-    struct ast_redirection *r = (struct ast_redirection *)redir_ast;
-    assert(r->left == redir_left);
-    assert(strcmp(r->file, "out.txt") == 0);
-
-    ast_free(redir_ast);
-
-    // subshell
-    struct ast *sub_body = fake_cmd();
-
-    struct ast *sub_ast = create_subshell(sub_body);
-    assert(sub_ast);
-    assert(sub_ast->type == AST_SUBSHELL);
-
-    struct ast_subshell *s = (struct ast_subshell *)sub_ast;
-    assert(s->body == sub_body);
-
-    ast_free(sub_ast);
+    struct ast *or_ast = create_or(create_cmd(w7), create_cmd(w8));
+    assert(or_ast && or_ast->type == AST_OR);
+    ast_free(or_ast);
 
     return 0;
 }

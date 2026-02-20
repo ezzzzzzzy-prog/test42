@@ -1,2 +1,1 @@
-VAR=42
-echo "This project is $VAR sh"
+VAR=ok ; echo "$VAR"

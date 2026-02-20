@@ -1,24 +1,26 @@
-bin_PROGRAMS = 42sh
+bin_PROGRAMS = minishell
 
-42sh_SOURCES = \
-    42sh.c \
-	ast.c \
-    ast_create.c \
-	ast_create_basics.c \
-	builtin.c \
-    exec.c \
-    expansion.c \
-    io_backend.c \
-    lexer.c \
-    parser.c \
-    special.c \
-    ast.h \
-    builtin.h \
-    exec.h \
-    expansion.h \
-    io_backend.h \
-    lexer.h \
-    parser.h \
-    special.h
+minishell_SOURCES = \
+    minishell.c \
+    ast/ast.c \
+    ast/ast_create.c \
+    lexer/lexer.c \
+    parser/parser.c \
+    exec/exec.c \
+    builtin/builtin.c \
+    expansion/expansion.c \
+    io_backend/io_backend.c \
+    special/special.c \
+    debug/debug.c \
+    ast/ast.h \
+    ast/ast_create.h \
+    lexer/lexer.h \
+    parser/parser.h \
+    exec/exec.h \
+    builtin/builtin.h \
+    expansion/expansion.h \
+    io_backend/io_backend.h \
+    special/special.h \
+    debug/debug.h
 
 AM_CFLAGS = -std=c99 -pedantic -Wall -Wextra -Werror -Wvla

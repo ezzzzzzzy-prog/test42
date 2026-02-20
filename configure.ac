@@ -1,5 +1,5 @@
-# Init the 42sh project
-AC_INIT([42sh], [1.0], [42sh@assistants.epita.fr])
+# Init the minishell project
+AC_INIT([minishell], [1.0], [minishell@assistants.epita.fr])
 
 # Setup Automake
 AM_INIT_AUTOMAKE([subdir-objects] [foreign])

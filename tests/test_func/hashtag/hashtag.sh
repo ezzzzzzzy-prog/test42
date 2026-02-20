@@ -1,1 +1,1 @@
-echo read#me#too
+echo #

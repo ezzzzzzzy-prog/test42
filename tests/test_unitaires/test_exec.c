@@ -1,22 +1,17 @@
-#include "exec.h"
-#include "builtin.h"
+#include <assert.h>
 #include <stdio.h>
 
-int main(void) {
-    printf("Test execute_command\n");
-    char *argv1[] = {"echo", "Hello world!", NULL};
-    execute_command(argv1);	
+#include "../../src/exec/exec.h"
+#include "../../src/parser/parser.h"
 
-    printf("\nTest execute_pipeline\n");
-    execute_pipeline();
-
-    printf("\nTest execute_redirect\n");
-    execute_redirect();
-
-    printf("\nTest execute_builtin\n");
-    char *argv2[] = {"true", NULL};  // ou echo, cd, etc.
-    execute_builtin(argv2);
-
+int main(void)
+{
+    printf("Test exec_set_parser\n");
+    struct parser *p = new_parse();
+    assert(p);
+    exec_set_parser(p);
+    assert(g_parser == p);
+    printf("OK: exec_set_parser\n");
+    parser_free(p);
     return 0;
 }
-

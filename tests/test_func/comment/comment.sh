@@ -1,2 +1,1 @@
-#this is a comment
-echo ok #ignore me
+# ceci est un commentaire

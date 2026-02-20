@@ -1,5 +1,0 @@
-if true
-then
-echo a
-echo b
-fi

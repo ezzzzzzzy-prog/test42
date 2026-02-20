@@ -1,1 +1,1 @@
-echo "# read me"
+echo hello # comment
