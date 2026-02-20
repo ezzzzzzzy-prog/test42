@@ -219,8 +219,9 @@ static int exec_redirection(struct ast_redirection *redir)
 /* ---- Pipeline ---- */
 
 static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
-                       int pipefd[2])
+                       int pipefd[2], pid_t *pids)
 {
+    free(pids);
     if (prev_fd != -1)
     {
         dup2(prev_fd, STDIN_FILENO);
@@ -262,17 +263,22 @@ static int fork_pipeline(struct ast_pipeline *p, pid_t *pids)
             return 0;
         }
         pid_t pid = fork();
-        if (pid < 0)
+        
+	if (pid < 0)
         {
             perror("fork");
             return 0;
         }
-        if (pid == 0)
-            exec_child(p, i, prev_fd, pipefd);
-        pids[i] = pid;
-        if (prev_fd != -1)
+        
+	if (pid == 0)
+            exec_child(p, i, prev_fd, pipefd, pids);
+        
+	pids[i] = pid;
+        
+	if (prev_fd != -1)
             close(prev_fd);
-        if (i + 1 < p->count)
+        
+	if (i + 1 < p->count)
         {
             close(pipefd[1]);
             prev_fd = pipefd[0];
@@ -317,9 +323,12 @@ static int exec_list(struct ast_list *list)
 }
 
 /* Execute un operateur && */
+
 static int exec_and(struct ast_and_or *a)
 {
     int status = exec_ast(a->left);
+    if (g_parser && g_parser->spe)
+        g_parser->spe->exit_code = status;
     if (status == 0)
         return exec_ast(a->right);
     return status;
@@ -329,6 +338,8 @@ static int exec_and(struct ast_and_or *a)
 static int exec_or(struct ast_and_or *a)
 {
     int status = exec_ast(a->left);
+    if (g_parser && g_parser->spe)
+        g_parser->spe->exit_code = status;
     if (status != 0)
         return exec_ast(a->right);
     return status;

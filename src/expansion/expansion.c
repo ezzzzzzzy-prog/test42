@@ -29,6 +29,7 @@ static int agrandir(struct exp_ctx *ctx)
     if (!tmp)
     {
         free(ctx->res);
+        ctx->res = NULL;
         return 0;
     }
     ctx->res = tmp;
@@ -308,23 +309,31 @@ char *expand(struct parser *parser, struct special *spe, const char *word)
 {
     if (!word || !parser)
         return NULL;
+    
     size_t len = strlen(word);
+    
     if (len >= 2 && word[0] == '\'' && word[len - 1] == '\''
         && memchr(word + 1, '\'', len - 2) == NULL)
         return expand_single_quote(word, len);
+    
     struct exp_ctx ctx;
     struct exp_params p;
+    
     if (!init_exp_ctx(&ctx, &p, parser, spe, len))
         return NULL;
+    
     size_t idx = 0;
     char *result = NULL;
+    
     if (boucle_expansion(&p, word, &idx))
     {
         ctx.res[ctx.pos] = '\0';
         result = ctx.res;
     }
+    
     else
         free(ctx.res);
+    
     return result;
 }
 
