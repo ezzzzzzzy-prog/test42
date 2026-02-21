@@ -3,17 +3,10 @@
 
 #include "../parser/parser.h"
 
-/*
- * Retourne 1 si cmd est le nom d'un builtin connu, 0 sinon.
- */
+// Check si la cmd est un builtin (1 si oui, 0 si non)
 int is_builtin(const char *cmd);
 
-/*
- * Execute le builtin correspondant a argv[0].
- * argv   : tableau d'arguments NULL-termine
- * parser : etat du shell (variables, exit, last_code...)
- * Retourne le code de retour du builtin.
- */
+// Execute builtin par argv et update le shell, retourne code de retour
 int execute_builtin(char **argv, struct parser *parser);
 
 #endif /* BUILTIN_H */

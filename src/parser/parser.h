@@ -5,41 +5,37 @@
 #include "../lexer/lexer.h"
 #include "../special/special.h"
 
-/* Variable shell stockee dans une liste chainee */
+// liste chainee des vars
 struct variable
 {
-    char *nom; /* nom de la variable */
-    char *value; /* valeur de la variable */
-    struct variable *next; /* maillon suivant dans la liste */
-    int exported; /* 1 si exportee dans l'environnement */
+    char *nom;
+    char *value;
+    struct variable *next;
+    int exported;
 };
 
-/* Etat global du parser et du shell */
+// Etat global (shell + parsing)
 struct parser
 {
-    struct lexer *lex; /* lexer associe au parser */
-    struct token *curr_tok; /* token courant (lookahead) */
-    struct variable *var; /* liste des variables shell */
-    struct special *spe; /* variables speciales ($?) */
-    int parse_error; /* 1 si une erreur de parsing a eu lieu */
-    int exit; /* 1 si le shell doit quitter */
-    int ex_code; /* code de sortie demande par exit */
-    int last_code; /* code de retour de la derniere commande */
+    struct lexer *lex;
+    struct token *curr_tok;
+    struct variable *var;
+    struct special *spe;
+    int parse_error;
+    int exit; // Flag de sortie
+    int ex_code; // Code de sortie
+    int last_code; // Retour derniere cmd
 };
 
-/* Cree et initialise un nouveau parser */
+// Allocation et free du parser
 struct parser *new_parse(void);
-
-/* Libere le parser et toutes ses ressources */
 void parser_free(struct parser *parser);
 
-/* Parse une entree complete et retourne l'AST correspondant */
+// Recupere l AST complet depuis l entree
 struct ast *parser_input(struct parser *parser);
 
-/* Ajoute ou met a jour une variable shell */
+// Utils pour les variables
 void add_var(struct parser *parser, const char *name, const char *value);
-
-/* Libere la liste chainee de variables */
 void free_variable(struct variable *var);
 
 #endif /* PARSER_H */

@@ -4,20 +4,13 @@
 #include "../ast/ast.h"
 #include "../parser/parser.h"
 
-/* Pointeur global vers le parser courant (accessible depuis exec et builtins)
- */
+// Pointer global vers le parser (pour l'exec et les builtins)
 extern struct parser *g_parser;
 
-/*
- * Execute recursivement un noeud AST.
- * Retourne le code de retour de la commande executee.
- */
+// Lance l execution recursive de l AST et renvoie le code de sortie
 int exec_ast(struct ast *ast);
 
-/*
- * Initialise le pointeur global vers le parser.
- * Doit etre appele avant tout appel a exec_ast.
- */
+// Set le pointer global avant de lancer l exec
 void exec_set_parser(struct parser *parser);
 
 #endif /* EXEC_H */

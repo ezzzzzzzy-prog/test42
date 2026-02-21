@@ -4,14 +4,14 @@
 
 #include "../ast/ast.h"
 
-/* Affiche l'indentation pour la profondeur donnee */
+// Gere l indentation selon la profondeur dans l arbre
 static void indent(int depth)
 {
     for (int i = 0; i < depth; i++)
         printf("  ");
 }
 
-/* Affiche un noeud commande */
+// Affiche le contenu d une commande (les mots)
 static void dump_cmd(struct ast *ast, int depth)
 {
     indent(depth);
@@ -26,7 +26,7 @@ static void dump_cmd(struct ast *ast, int depth)
     printf("\n");
 }
 
-/* Affiche un noeud liste */
+// Dump une liste
 static void dump_list(struct ast *ast, int depth)
 {
     indent(depth);
@@ -35,7 +35,7 @@ static void dump_list(struct ast *ast, int depth)
         ast_dump(ast->data.list.commands[i], depth + 1);
 }
 
-/* Affiche un noeud pipeline */
+// Dump un pipeline (|)
 static void dump_pipeline(struct ast *ast, int depth)
 {
     indent(depth);
@@ -44,7 +44,7 @@ static void dump_pipeline(struct ast *ast, int depth)
         ast_dump(ast->data.pipeline.cmds[i], depth + 1);
 }
 
-/* Affiche un noeud and/or */
+// Dump les nodes AND/OR (&& et ||)
 static void dump_and_or(struct ast *ast, int depth, const char *op)
 {
     indent(depth);
@@ -53,7 +53,7 @@ static void dump_and_or(struct ast *ast, int depth, const char *op)
     ast_dump(ast->data.and_or.right, depth + 1);
 }
 
-/* Retourne le symbole de redirection */
+// Choisi le bon symbole pour la redir
 static const char *redir_sym(struct ast *ast)
 {
     if (ast->data.redir.type == AST_REDIR_APP)
@@ -63,7 +63,7 @@ static const char *redir_sym(struct ast *ast)
     return ">";
 }
 
-/* Affiche un noeud redirection */
+// Affiche la redir avec le fd et le fchier
 static void dump_redir(struct ast *ast, int depth)
 {
     indent(depth);
@@ -76,7 +76,7 @@ static void dump_redir(struct ast *ast, int depth)
     ast_dump(ast->data.redir.left, depth + 1);
 }
 
-/* Affiche recursivement l'AST pour le debug */
+// Fonction recursive pour dump n importe quel node genre tous
 void ast_dump(struct ast *ast, int depth)
 {
     if (!ast)

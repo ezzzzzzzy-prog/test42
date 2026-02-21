@@ -3,7 +3,7 @@
 
 #include "../ast/ast.h"
 
-/* Affiche recursivement l'AST avec indentation pour le debug */
+// Affiche l AST par indentation (pour le debug)
 void ast_dump(struct ast *ast, int depth);
 
 #endif /* DEBUG_H */

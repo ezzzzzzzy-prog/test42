@@ -12,6 +12,7 @@
 
 extern struct parser *g_parser;
 
+// Check si le nom correspond a un builtin
 int is_builtin(const char *cmd)
 {
     if (!cmd)
@@ -19,15 +20,20 @@ int is_builtin(const char *cmd)
 
     if (strcmp(cmd, "echo") == 0)
         return 1;
+
     if (strcmp(cmd, "exit") == 0)
         return 1;
+
     if (strcmp(cmd, "cd") == 0)
         return 1;
+
     if (strcmp(cmd, "kill") == 0)
         return 1;
+
     return 0;
 }
 
+// Custom atoi pour gerer les codes de retour
 static int string_to_int(const char *str)
 {
     int result = 0;
@@ -56,6 +62,7 @@ static int string_to_int(const char *str)
     return result * signe;
 }
 
+// Affiche un str + gerer les backslashs pour echo -e
 static void echo_print(const char *s, int f)
 {
     for (int i = 0; s[i]; i++)
@@ -82,6 +89,7 @@ static void echo_print(const char *s, int f)
     }
 }
 
+// Parse les options -n, -e et -E pour echo
 static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
 {
     while (argv[*idx] && argv[*idx][0] == '-' && argv[*idx][1])
@@ -103,6 +111,7 @@ static int parse_echo_flags(char **argv, int *idx, int *n_flag, int *e_flag)
     return 0;
 }
 
+// Builtin echo : affiche du texte
 static int builtin_echo(char **argv, struct parser *parser)
 {
     int n_flag = 0;
@@ -132,6 +141,7 @@ static int builtin_echo(char **argv, struct parser *parser)
     return 0;
 }
 
+// Builtin exit : quitte le shell
 static int builtin_exit(char **argv, struct parser *parser)
 {
     if (argv[1] == NULL)
@@ -145,7 +155,7 @@ static int builtin_exit(char **argv, struct parser *parser)
         printf("minishell: exit: too many arguments\n");
         return 1;
     }
-    /* Vérifier que l'argument est numérique */
+    // Verif que l arg est bien un nombre
     for (int i = 0; argv[1][i]; i++)
     {
         if ((i == 0 && argv[1][i] == '-') || (i == 0 && argv[1][i] == '+'))
@@ -164,6 +174,7 @@ static int builtin_exit(char **argv, struct parser *parser)
     return parser->ex_code;
 }
 
+// Builtin cd : change le directory actuel
 static int builtin_cd(char **argv)
 {
     char *way = argv[1];
@@ -187,7 +198,7 @@ static int builtin_cd(char **argv)
     return 0;
 }
 
-/* Parse l'option signal de kill, retourne le signal ou -1 si erreur */
+// Parse le numero du signal pour kill (ex: -9)
 static int parse_kill_signal(const char *arg, int *sig)
 {
     int i = 1;
@@ -204,7 +215,7 @@ static int parse_kill_signal(const char *arg, int *sig)
     return 1;
 }
 
-/* Envoie le signal aux PIDs listes */
+// Envoie le signal a chaque PID de la liste
 static int send_signal(char **argv, int idx, int sig)
 {
     while (argv[idx])
@@ -225,7 +236,7 @@ static int send_signal(char **argv, int idx, int sig)
     return 0;
 }
 
-/* Builtin kill : envoie un signal a des processus */
+// Builtin kill : envoie des signaux aux pids
 static int builtin_kill(char **argv)
 {
     if (!argv || !argv[1])
@@ -244,6 +255,7 @@ static int builtin_kill(char **argv)
     return send_signal(argv, idx, sig);
 }
 
+// Dispatch l execution vers le bon builtin
 int execute_builtin(char **argv, struct parser *parser)
 {
     if (argv == NULL || argv[0] == NULL)

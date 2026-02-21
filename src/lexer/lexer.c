@@ -7,6 +7,7 @@
 
 #include "../io_backend/io_backend.h"
 
+// Duplique une chaine
 static char *my_strdup(const char *s)
 {
     size_t len = strlen(s) + 1;
@@ -17,6 +18,7 @@ static char *my_strdup(const char *s)
     return copy;
 }
 
+// Ajoute un caractere a un buffer dyna (realloc si besoi)
 static char *append_char(char *buf, int *s, int *cap, char c)
 {
     if (*s + 1 >= *cap)
@@ -29,6 +31,7 @@ static char *append_char(char *buf, int *s, int *cap, char c)
     return buf;
 }
 
+// free un token
 void free_tok(struct token *tok)
 {
     if (!tok)
@@ -37,6 +40,7 @@ void free_tok(struct token *tok)
     free(tok);
 }
 
+// Cree une nouvelle instance du lexer
 struct lexer *new_lex(void)
 {
     struct lexer *lex = malloc(sizeof(*lex));
@@ -46,6 +50,7 @@ struct lexer *new_lex(void)
     return lex;
 }
 
+// Libere le lexer et son token
 void lexer_free(struct lexer *lex)
 {
     if (!lex)
@@ -55,6 +60,7 @@ void lexer_free(struct lexer *lex)
     free(lex);
 }
 
+// Alloue et remplit un nv token
 static struct token *new_tok(enum type type, char *val)
 {
     struct token *tok = malloc(sizeof(struct token));
@@ -65,6 +71,7 @@ static struct token *new_tok(enum type type, char *val)
     return tok;
 }
 
+// Ignore les commentaires commençant par #
 static struct token *comment_tok(int c)
 {
     while (c != EOF && c != '\n')
@@ -72,6 +79,7 @@ static struct token *comment_tok(int c)
     return new_tok(c == '\n' ? TOK_NEWLINE : TOK_EOF, NULL);
 }
 
+// Saute les espaces et tabulations
 static int skip(void)
 {
     int c = io_backend_next();
@@ -81,6 +89,7 @@ static int skip(void)
     return c;
 }
 
+// Identifie les tokens de base (un seul char)
 static struct token *simple_tok(int c)
 {
     if (c == EOF)
@@ -92,6 +101,7 @@ static struct token *simple_tok(int c)
     return NULL;
 }
 
+// Gere le pipe | ou le OR ||
 static struct token *pipe_tok(void)
 {
     if (io_backend_peek() == '|')
@@ -102,6 +112,7 @@ static struct token *pipe_tok(void)
     return new_tok(TOK_PIPE, NULL);
 }
 
+// Gere la redirection > ou >>
 static struct token *redir_out_tok(void)
 {
     if (io_backend_peek() == '>')
@@ -112,11 +123,13 @@ static struct token *redir_out_tok(void)
     return new_tok(TOK_REDIR_OUT, NULL);
 }
 
+// Gere la redirection <
 static struct token *redir_in_tok(void)
 {
     return new_tok(TOK_REDIR_IN, NULL);
 }
 
+// Transforme un buffer en token type WORD
 static struct token *word_tok(char *buf)
 {
     char *copy = my_strdup(buf);
@@ -127,6 +140,7 @@ static struct token *word_tok(char *buf)
     return tok;
 }
 
+// Analyse de ce quil y a entre " "
 static int double_quote(char **buf, int *s, int *cap)
 {
     int c = io_backend_next();
@@ -145,7 +159,7 @@ static int double_quote(char **buf, int *s, int *cap)
 
             else if (n == '\n')
             {
-                /* line continuation inside double quotes: ignore */
+                /*ignore */
             }
             else if (n == ' ')
             {
@@ -164,6 +178,7 @@ static int double_quote(char **buf, int *s, int *cap)
     return c;
 }
 
+// Analyse entre single quotes ' '
 static int single_quote(char **buf, int *s, int *cap)
 {
     int c = io_backend_next();
@@ -175,6 +190,7 @@ static int single_quote(char **buf, int *s, int *cap)
     return io_backend_next();
 }
 
+// Gere \ .
 static void backslash(char **buf, int *s, int *cap)
 {
     int n = io_backend_next();
@@ -183,6 +199,7 @@ static void backslash(char **buf, int *s, int *cap)
     *buf = append_char(*buf, s, cap, n);
 }
 
+// Lit un mot complet juqua avoir qq chose qui separe
 static struct token *read_tok(int c)
 {
     int cap = 64;
@@ -218,6 +235,7 @@ static struct token *read_tok(int c)
     return word_tok(buf);
 }
 
+// TRouve la diff entre un nombre et un num de descripteur (ex: 2>)
 static struct token *redir_nb(int c)
 {
     char buf[32];
@@ -244,6 +262,7 @@ static struct token *redir_nb(int c)
     return t;
 }
 
+// construit le prochain token
 static struct token *build(void)
 {
     int c = skip();
@@ -279,6 +298,7 @@ static struct token *build(void)
     return read_tok(c);
 }
 
+// Regarde le prochain token
 struct token *peek(struct lexer *lex)
 {
     if (!lex)
@@ -288,6 +308,7 @@ struct token *peek(struct lexer *lex)
     return lex->curr_tok;
 }
 
+// Recupere le prochain token + l enleve du lexer
 struct token *pop(struct lexer *lex)
 {
     struct token *tok;

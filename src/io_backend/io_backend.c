@@ -5,7 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Stream global pour la lecture (file, stdin ou buffer memoire)
 static FILE *f = NULL;
+
+// Initialise la source d entree (stdin, chaine -c ou fichier)
 int io_backend_init(int argc, char **argv)
 {
     if (argc == 1)
@@ -36,6 +39,7 @@ int io_backend_init(int argc, char **argv)
     return 0;
 }
 
+// Uitilse et renvoie le prochain caractere
 int io_backend_next(void)
 {
     if (!f)
@@ -46,6 +50,7 @@ int io_backend_next(void)
     return res;
 }
 
+// Renvoie le prochain caractere sans le consommer (via ungetc)
 int io_backend_peek(void)
 {
     if (!f)
@@ -57,6 +62,7 @@ int io_backend_peek(void)
     return c;
 }
 
+// Ferme le flux sauf si c est stdin
 void io_backend_close(void)
 {
     if (f && f != stdin)

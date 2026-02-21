@@ -1,16 +1,16 @@
 #ifndef SPECIAL_H
 #define SPECIAL_H
 
-/* Variables speciales du shell (ex: $?) */
+// Stocke les variables speciales (comme le $?)
 struct special
 {
-    int exit_code; /* code de retour de la derniere commande executee ($?) */
+    int exit_code; // Valeur de $?
 };
 
-/* Cree et initialise une structure special */
+// Alloue et init le special
 struct special *create_special(void);
 
-/* Libere une structure special */
+// Libere la structure
 void free_special(struct special *spe);
 
 #endif /* SPECIAL_H */

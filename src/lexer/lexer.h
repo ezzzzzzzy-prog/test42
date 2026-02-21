@@ -1,48 +1,48 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-/* Types de tokens produits par le lexer */
+// Liste des types de tokens
 enum type
 {
-    TOK_EOF, /* fin de fichier */
-    TOK_WORD, /* mot ou argument */
-    TOK_SEMI, /* separateur ';' */
-    TOK_NEWLINE, /* saut de ligne */
-    TOK_PIPE, /* operateur pipe '|' */
-    TOK_OR, /* operateur logique '||' */
-    TOK_AND, /* operateur logique '&&' */
-    TOK_REDIR_OUT, /* redirection sortie '>' */
-    TOK_REDIR_APP, /* redirection ajout '>>' */
-    TOK_REDIR_IN, /* redirection entree '<' */
-    TOK_REDIR_NB /* numero de fd explicite ex: '2>' */
+    TOK_EOF, // Fin de l entree
+    TOK_WORD, // cmd ou un arg
+    TOK_SEMI, // Separateur de commande ';'
+    TOK_NEWLINE, // Fin de ligne '\n'
+    TOK_PIPE, // Barre '|'
+    TOK_OR, // Operateur '||'
+    TOK_AND, // Operateur '&&'
+    TOK_REDIR_OUT, // Redirection '>'
+    TOK_REDIR_APP, // Redirection '>>'
+    TOK_REDIR_IN, // Redirection '<'
+    TOK_REDIR_NB // Numero de FD pour redir (ex: '2' dans '2>')
 };
 
-/* Token produit par le lexer */
+// Structure d un token : type + sa valeur chaine
 struct token
 {
-    enum type type; /* type du token */
-    char *val; /* valeur textuelle (NULL si non applicable) */
+    enum type type;
+    char *val;
 };
 
-/* Etat du lexer avec lookahead d'un token */
+// stocke le token
 struct lexer
 {
-    struct token *curr_tok; /* token courant en attente de consommation */
+    struct token *curr_tok;
 };
 
-/* Cree et initialise un nouveau lexer */
+// Alloue un nv lexer
 struct lexer *new_lex(void);
 
-/* Libere le lexer et ses ressources */
+// Nettoie le lexer + le token en attente
 void lexer_free(struct lexer *lex);
 
-/* Retourne le token courant sans le consommer */
+// Regarde le prochain token sans l enlever
 struct token *peek(struct lexer *lex);
 
-/* Retourne et consomme le token courant */
+// Recupere le prochain token et passe a la suite
 struct token *pop(struct lexer *lex);
 
-/* Libere un token et sa valeur */
+// Libere un token + sa valeur
 void free_tok(struct token *tok);
 
 #endif /* LEXER_H */

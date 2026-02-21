@@ -9,21 +9,26 @@
 #include "parser/parser.h"
 #include "special/special.h"
 
-/* Boucle principale d'execution du shell */
+// Parse, Execute, Free
 static int run_shell(struct parser *parser)
 {
     int status = 0;
     while (!parser->exit)
     {
         struct ast *ast = parser_input(parser);
+
         if (!ast)
         {
+            // Si erreur de syntaxe on stop avec code 2 (standard POSIX)
+
             if (parser->parse_error)
                 return 2;
             break;
         }
+
         status = exec_ast(ast);
         parser->last_code = status;
+
         if (parser->spe)
             parser->spe->exit_code = status;
         ast_free(ast);
@@ -33,23 +38,35 @@ static int run_shell(struct parser *parser)
 
 int main(int argc, char **argv)
 {
+    // On init
     if (io_backend_init(argc, argv) < 0)
         return 2;
     struct parser *parser = new_parse();
+
+    // On setup parser + compo
     if (!parser)
     {
         io_backend_close();
         return 2;
     }
+
     parser->spe = create_special();
     exec_set_parser(parser);
+
+    // On lance + recupere les infos avant de free
     int status = run_shell(parser);
     int should_exit = parser->exit;
     int exit_code = parser->ex_code;
+
+    // On clean
     free_special(parser->spe);
     parser_free(parser);
     io_backend_close();
+
+    // Si on a un exit, on sort de force
     if (should_exit)
         _exit(exit_code);
+
     return status;
+    // Code structure
 }

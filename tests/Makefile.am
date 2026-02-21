@@ -1,5 +1,6 @@
+SUBDIRS = test_unitaires
 check-local:
-	./testsuite.sh
+	BIN_PATH=$(top_builddir)/src/minishell ./testsuite.sh
 
 CLEANFILES = \
     *.txt \

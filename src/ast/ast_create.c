@@ -4,6 +4,7 @@
 
 #include "ast.h"
 
+// Init un node pour une cmd simple
 struct ast *create_cmd(char **words)
 {
     struct ast *ast = malloc(sizeof(*ast));
@@ -16,6 +17,7 @@ struct ast *create_cmd(char **words)
     return ast;
 }
 
+// Cree un node list pour stocker les suites de cmds (;)
 struct ast *create_list(struct ast **cmds, size_t count)
 {
     struct ast *ast = malloc(sizeof(*ast));
@@ -30,6 +32,7 @@ struct ast *create_list(struct ast **cmds, size_t count)
     return ast;
 }
 
+// Alloc un node pipeline pour pipes
 struct ast *ast_pipeline_create(struct ast **cmds, size_t count)
 {
     struct ast *ast = calloc(1, sizeof(*ast));
@@ -43,6 +46,7 @@ struct ast *ast_pipeline_create(struct ast **cmds, size_t count)
     return ast;
 }
 
+// Cree un node pour ET
 struct ast *create_and(struct ast *left, struct ast *right)
 {
     struct ast *ast = malloc(sizeof(*ast));
@@ -56,6 +60,7 @@ struct ast *create_and(struct ast *left, struct ast *right)
     return ast;
 }
 
+// Cree un node pour OU
 struct ast *create_or(struct ast *left, struct ast *right)
 {
     struct ast *ast = malloc(sizeof(*ast));
@@ -69,6 +74,7 @@ struct ast *create_or(struct ast *left, struct ast *right)
     return ast;
 }
 
+// Init un node redir avec le type et le fichier
 struct ast *create_redir(enum redir_type type, struct ast *left, char *file,
                          int redir_nb)
 {

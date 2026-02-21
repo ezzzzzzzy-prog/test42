@@ -10,6 +10,7 @@
 
 static struct ast *parse_command(struct parser *parser);
 
+// Libere token actuel et recupere le suivant
 static void parser_consume(struct parser *parser)
 {
     if (!parser)
@@ -22,6 +23,7 @@ static void parser_consume(struct parser *parser)
     parser->curr_tok = pop(parser->lex);
 }
 
+// Cree un parser tout neuf
 struct parser *new_parse(void)
 {
     struct parser *p = malloc(sizeof(*p));
@@ -38,6 +40,7 @@ struct parser *new_parse(void)
     return p;
 }
 
+// Clean la liste des variables
 void free_variable(struct variable *var)
 {
     while (var)
@@ -50,6 +53,7 @@ void free_variable(struct variable *var)
     }
 }
 
+// free tout le parser
 void parser_free(struct parser *parser)
 {
     if (!parser)
@@ -61,6 +65,7 @@ void parser_free(struct parser *parser)
     free(parser);
 }
 
+// Ajoute/Update une variable et met a jour l env
 void add_var(struct parser *parser, const char *name, const char *value)
 {
     if (!parser || !name)
@@ -94,7 +99,6 @@ static int is_redirection(enum type t)
         || t == TOK_REDIR_NB;
 }
 
-/* Convertit le type token en type redirection */
 static int tok_to_redir(enum type t, enum redir_type *rt)
 {
     if (t == TOK_REDIR_OUT)
@@ -115,7 +119,7 @@ static int tok_to_redir(enum type t, enum redir_type *rt)
     return 0;
 }
 
-/* Parse une redirection et retourne le noeud AST */
+// Helper pour parser une redir (ex: 2> file)
 static struct ast *parse_redir(struct parser *parser, struct ast *left_cmd)
 {
     if (!parser || !parser->curr_tok || !is_redirection(parser->curr_tok->type))
@@ -167,8 +171,7 @@ static void free_words(char **words, size_t count)
     free(words);
 }
 
-/* Retourne 1 si le token est un ASSIGNMENT_WORD (contient '=' sans chiffre
- * avant) */
+// Check si le mot est une assignation (ex: VAR=val)
 static int is_assignment(const char *word)
 {
     if (!word || !word[0])
@@ -189,7 +192,7 @@ static int is_assignment(const char *word)
     return 0;
 }
 
-/* Collecte les assignments et redirections prefixes */
+// Parse les prefixes (redirs et exports avant la commande)
 static int parse_prefixes(struct parser *parser, struct ast **redirs,
                           char ***assignments, size_t *nassign,
                           size_t *assign_cap)
@@ -206,6 +209,7 @@ static int parse_prefixes(struct parser *parser, struct ast **redirs,
                 return 0;
             *redirs = app_redir(*redirs, r);
         }
+
         else
         {
             if (*nassign + 1 >= *assign_cap)
@@ -213,6 +217,7 @@ static int parse_prefixes(struct parser *parser, struct ast **redirs,
                 *assign_cap *= 2;
                 char **tmp =
                     realloc(*assignments, sizeof(char *) * (*assign_cap));
+
                 if (!tmp)
                     return 0;
                 *assignments = tmp;
@@ -224,7 +229,7 @@ static int parse_prefixes(struct parser *parser, struct ast **redirs,
     return 1;
 }
 
-/* Applique les assignments au parser */
+// Applique les assigmt au parser
 static void apply_assignments(struct parser *parser, char **assignments,
                               size_t nassign)
 {
@@ -242,19 +247,20 @@ static void apply_assignments(struct parser *parser, char **assignments,
     free(assignments);
 }
 
-/* Attache les redirections a la commande */
+// redir vers command
 static struct ast *attach_redirs(struct ast *redirs, struct ast *cmd)
 {
     if (!redirs)
         return cmd;
     struct ast_redirection *tmp = &redirs->data.redir;
+
     while (tmp->left && tmp->left->type == AST_REDIRECTION)
         tmp = &tmp->left->data.redir;
     tmp->left = cmd;
     return redirs;
 }
 
-/* Collecte les mots et redirections elements de la commande */
+// Prend mots et redirections de la cmd
 static int parse_elements(struct parser *parser, struct ast **redirs,
                           char ***words, size_t *count, size_t *cap)
 {
@@ -265,6 +271,7 @@ static int parse_elements(struct parser *parser, struct ast **redirs,
         if (is_redirection(parser->curr_tok->type))
         {
             struct ast *r = parse_redir(parser, NULL);
+
             if (!r)
                 return 0;
             *redirs = app_redir(*redirs, r);
@@ -275,6 +282,7 @@ static int parse_elements(struct parser *parser, struct ast **redirs,
             {
                 *cap *= 2;
                 char **tmp = realloc(*words, sizeof(char *) * (*cap));
+
                 if (!tmp)
                     return 0;
                 *words = tmp;
@@ -287,16 +295,18 @@ static int parse_elements(struct parser *parser, struct ast **redirs,
     return 1;
 }
 
-/* Parse une commande simple avec prefixes et elements */
+// Parse une commande avec prefixes + elmts
 struct ast *parse_simple_command(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
         return NULL;
 
     struct ast *redirs = NULL;
+
     char **assignments = malloc(sizeof(char *) * 4);
     size_t nassign = 0;
     size_t assign_cap = 4;
+
     if (!assignments)
         return NULL;
 
@@ -312,6 +322,7 @@ struct ast *parse_simple_command(struct parser *parser)
     size_t cap = 4;
     size_t count = 0;
     char **words = malloc(sizeof(char *) * cap);
+
     if (!words)
         goto error_prefix;
 
@@ -319,14 +330,18 @@ struct ast *parse_simple_command(struct parser *parser)
         goto error_words;
 
     apply_assignments(parser, assignments, nassign);
+
     return attach_redirs(redirs, create_cmd(words));
 
 error_words:
+
     free_words(words, count);
 error_prefix:
+
     for (size_t i = 0; i < nassign; i++)
         free(assignments[i]);
     free(assignments);
+
     ast_free(redirs);
     return NULL;
 }
@@ -335,6 +350,7 @@ static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
                                size_t *count, size_t *capacity)
 {
     struct ast *cmd = parse_command(parser);
+
     if (!cmd)
         return 0;
     (*cmds)[(*count)++] = cmd;
@@ -342,9 +358,10 @@ static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
     while (parser->curr_tok && parser->curr_tok->type == TOK_PIPE)
     {
         parser_consume(parser);
-        /* Sauter les newlines après | */
+
         while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
             parser_consume(parser);
+
         if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF
             || parser->curr_tok->type == TOK_PIPE)
         {
@@ -353,12 +370,15 @@ static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
             return 0;
         }
         cmd = parse_command(parser);
+
         if (!cmd)
             return 0;
+
         if (*count == *capacity)
         {
             *capacity *= 2;
             struct ast **tmp = realloc(*cmds, sizeof(*tmp) * (*capacity));
+
             if (!tmp)
                 return 0;
             *cmds = tmp;
@@ -368,11 +388,13 @@ static int parse_pipeline_cmds(struct parser *parser, struct ast ***cmds,
     return 1;
 }
 
+// Gere les pipelines
 struct ast *parse_pipeline(struct parser *parser)
 {
     size_t capacity = 4;
     size_t count = 0;
     struct ast **cmds = malloc(sizeof(*cmds) * capacity);
+
     if (!cmds)
         return NULL;
 
@@ -381,21 +403,25 @@ struct ast *parse_pipeline(struct parser *parser)
         for (size_t i = 0; i < count; i++)
             ast_free(cmds[i]);
         free(cmds);
+
         return NULL;
     }
 
     if (count == 1)
     {
         struct ast *r = cmds[0];
+
         free(cmds);
         return r;
     }
     return ast_pipeline_create(cmds, count);
 }
 
+// Gere les && et ||
 struct ast *parse_and_or(struct parser *parser)
 {
     struct ast *left = parse_pipeline(parser);
+
     if (!left)
         return NULL;
 
@@ -405,17 +431,21 @@ struct ast *parse_and_or(struct parser *parser)
     {
         enum type op = parser->curr_tok->type;
         parser_consume(parser);
+
         while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
             parser_consume(parser);
 
         struct ast *right = parse_pipeline(parser);
+
         if (!right)
         {
             ast_free(left);
             return NULL;
         }
+
         if (op == TOK_AND)
             left = create_and(left, right);
+
         else
             left = create_or(left, right);
     }
@@ -429,6 +459,7 @@ static int add_ast(struct ast ***cmds, size_t *count, size_t *cap,
     {
         *cap *= 2;
         struct ast **tmp = realloc(*cmds, sizeof(**cmds) * (*cap));
+
         if (!tmp)
             return 0;
         *cmds = tmp;
@@ -437,9 +468,7 @@ static int add_ast(struct ast ***cmds, size_t *count, size_t *cap,
     return 1;
 }
 
-/* list = and_or { ';' and_or } [ ';' ] */
-
-/* Gere l'erreur de double point-virgule */
+// Gere l'erreur de double point-virgule
 static void free_list_cmds(struct ast **cmds, size_t count)
 {
     for (size_t i = 0; i < count; i++)
@@ -452,43 +481,52 @@ static void handle_double_semi(struct parser *parser, struct ast **cmds,
 {
     fprintf(stderr, "minishell: syntax error near unexpected token ';;'\n");
     parser->parse_error = 1;
+
     while (parser->curr_tok && parser->curr_tok->type != TOK_EOF
            && parser->curr_tok->type != TOK_NEWLINE)
         parser_consume(parser);
+
     for (size_t i = 0; i < count; i++)
         ast_free(cmds[i]);
     free(cmds);
 }
 
-/* Parse une liste de commandes separees par ';' */
+// Gere les listes separees par ;
 static struct ast *parse_list(struct parser *parser)
 {
     struct ast *first = parse_and_or(parser);
+
     if (!first)
         return NULL;
     size_t cap = 4;
     size_t count = 1;
     struct ast **cmds = malloc(sizeof(*cmds) * cap);
+
     if (!cmds)
     {
         ast_free(first);
         return NULL;
     }
     cmds[0] = first;
+
     while (parser->curr_tok && parser->curr_tok->type == TOK_SEMI)
     {
         parser_consume(parser);
+
         if (parser->curr_tok && parser->curr_tok->type == TOK_SEMI)
         {
             handle_double_semi(parser, cmds, count);
             return NULL;
         }
+
         if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF
             || parser->curr_tok->type == TOK_NEWLINE)
             break;
         struct ast *next = parse_and_or(parser);
+
         if (!next)
             break;
+
         if (!add_ast(&cmds, &count, &cap, next))
         {
             ast_free(next);
@@ -501,24 +539,29 @@ static struct ast *parse_list(struct parser *parser)
         free(cmds);
         return first;
     }
+
     return create_list(cmds, count);
 }
+
 static struct ast *parse_command(struct parser *parser)
 {
     if (!parser || !parser->curr_tok)
         return NULL;
+
     return parse_simple_command(parser);
 }
 
-/* input = list '\n' | list EOF | '\n' | EOF */
+// Point d entree principal du parsing
 struct ast *parser_input(struct parser *parser)
 {
     if (!parser)
         return NULL;
-    /* Sauter les newlines en tête */
+
     while (parser->curr_tok && parser->curr_tok->type == TOK_NEWLINE)
         parser_consume(parser);
+
     if (!parser->curr_tok || parser->curr_tok->type == TOK_EOF)
         return NULL;
+
     return parse_list(parser);
 }

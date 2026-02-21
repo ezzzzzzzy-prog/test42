@@ -15,14 +15,13 @@
 
 struct parser *g_parser = NULL;
 
-/* ---- Declarations anticipees ---- */
+// Prototypes pour la recursion de l execution
 int exec_ast(struct ast *ast);
 static int find_targ_fd(struct ast_redirection *r);
 static void redirect(struct ast_redirection *r);
 static struct ast *all_redirections(struct ast *ast);
 
-/* ---- Utilitaires redirection ---- */
-
+// Trouve le fd cible (defaut: 0 pour <, 1 pour >)
 static int find_targ_fd(struct ast_redirection *r)
 {
     if (r->redir_nb != -1)
@@ -32,6 +31,7 @@ static int find_targ_fd(struct ast_redirection *r)
     return STDOUT_FILENO;
 }
 
+// Applique une redirection via open et dup2
 static void redirect(struct ast_redirection *r)
 {
     int target_fd = find_targ_fd(r);
@@ -54,6 +54,7 @@ static void redirect(struct ast_redirection *r)
     close(fd);
 }
 
+// Applique en boucle les redirs imbriquees
 static struct ast *all_redirections(struct ast *ast)
 {
     while (ast && ast->type == AST_REDIRECTION)
@@ -64,7 +65,7 @@ static struct ast *all_redirections(struct ast *ast)
     return ast;
 }
 
-/* Expand tous les arguments de la commande */
+// Applique l expansion ($VAR, etc) sur tous les args
 static char **expand_args(char **argv, int cnt)
 {
     char **exp = malloc(sizeof(char *) * (cnt + 1));
@@ -82,7 +83,7 @@ static char **expand_args(char **argv, int cnt)
     return exp;
 }
 
-/* Libere le tableau d'arguments expandus */
+// Libere le tableau d args apres expansion
 static void free_exp(char **exp, int cnt)
 {
     for (int k = 0; k < cnt; k++)
@@ -90,7 +91,7 @@ static void free_exp(char **exp, int cnt)
     free(exp);
 }
 
-/* Forke et execute une commande externe */
+// Fork et execve pour les commandes externes
 static int fork_exec(char **exp, int cnt)
 {
     pid_t p = fork();
@@ -112,7 +113,7 @@ static int fork_exec(char **exp, int cnt)
     return WIFEXITED(st) ? WEXITSTATUS(st) : 1;
 }
 
-/* Execute une commande simple (builtin ou externe) */
+// Gere le dispatch entre builtin et binaire externe
 static int exec_command(char **argv)
 {
     if (!argv || !argv[0])
@@ -132,9 +133,7 @@ static int exec_command(char **argv)
     return fork_exec(exp, cnt);
 }
 
-/* ---- Redirections ---- */
-
-/* Execute une redirection avec commande externe (fork) */
+// Fork special pour les redirs de commandes externes
 static int exec_redir_external(struct ast_redirection *redir)
 {
     pid_t pid = fork();
@@ -153,7 +152,7 @@ static int exec_redir_external(struct ast_redirection *redir)
     return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 }
 
-/* Applique les redirections pour un builtin dans le process courant */
+// Redirige les flux sans fork pour les builtins
 static int apply_redir_builtin(struct ast **c)
 {
     int ok = 1;
@@ -181,7 +180,7 @@ static int apply_redir_builtin(struct ast **c)
     return ok;
 }
 
-/* Execute une redirection avec builtin (sans fork) */
+// Sauvegarde les FDs originaux, execute le builtin, puis restore
 static int exec_redir_builtin(struct ast_redirection *redir)
 {
     int saved_in = dup(STDIN_FILENO);
@@ -202,7 +201,7 @@ static int exec_redir_builtin(struct ast_redirection *redir)
     return ok ? status : 1;
 }
 
-/* Execute une redirection selon le type de commande */
+// Decide si on redir avec ou sans fork selon la cible
 static int exec_redirection(struct ast_redirection *redir)
 {
     struct ast *cmd = redir->left;
@@ -216,8 +215,7 @@ static int exec_redirection(struct ast_redirection *redir)
     return exec_redir_builtin(redir);
 }
 
-/* ---- Pipeline ---- */
-
+// Execute un element du pipe (child process)
 static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
                        int pipefd[2], pid_t *pids)
 {
@@ -236,7 +234,7 @@ static void exec_child(struct ast_pipeline *p, size_t i, int prev_fd,
     _exit(exec_ast(p->cmds[i]));
 }
 
-/* Attend la fin de tous les enfants et retourne le status du dernier */
+// Wait tous les pids du pipe et chope le code du dernier
 static int wait_pipeline(pid_t *pids, size_t count)
 {
     int status = 0;
@@ -250,7 +248,7 @@ static int wait_pipeline(pid_t *pids, size_t count)
     return status;
 }
 
-/* Forke et connecte les commandes du pipeline */
+// Boucle de creation des pipes et des forks
 static int fork_pipeline(struct ast_pipeline *p, pid_t *pids)
 {
     int prev_fd = -1;
@@ -287,7 +285,7 @@ static int fork_pipeline(struct ast_pipeline *p, pid_t *pids)
     return 1;
 }
 
-/* Execute un pipeline de commandes */
+// Setup l execution par pipe
 static int exec_pipeline(struct ast_pipeline *p)
 {
     if (!p || p->count == 0)
@@ -307,9 +305,7 @@ static int exec_pipeline(struct ast_pipeline *p)
     return status;
 }
 
-/* ---- Entree principale ---- */
-
-/* Execute une liste de commandes separees par ';' */
+// Execute les cmds une par une (le ;)
 static int exec_list(struct ast_list *list)
 {
     int status = 0;
@@ -322,8 +318,7 @@ static int exec_list(struct ast_list *list)
     return status;
 }
 
-/* Execute un operateur && */
-
+// Execute l operande droit seulement si le gauche reussit
 static int exec_and(struct ast_and_or *a)
 {
     int status = exec_ast(a->left);
@@ -334,7 +329,7 @@ static int exec_and(struct ast_and_or *a)
     return status;
 }
 
-/* Execute un operateur || */
+// Execute l operande droit que si le gauche echoue
 static int exec_or(struct ast_and_or *a)
 {
     int status = exec_ast(a->left);
@@ -345,7 +340,7 @@ static int exec_or(struct ast_and_or *a)
     return status;
 }
 
-/* Execute recursivement un noeud AST */
+// Main switch pour parcourir l AST et executer les nodes
 int exec_ast(struct ast *ast)
 {
     if (g_parser && g_parser->exit)
@@ -373,6 +368,7 @@ int exec_ast(struct ast *ast)
     }
 }
 
+// Lie le parser global pour l expansion et les codes d erreur
 void exec_set_parser(struct parser *parser)
 {
     g_parser = parser;
