@@ -22,3 +22,10 @@ tests/Makefile
 tests/Makefile.in
 *.Po
 .dirstamp
+tests/$F
+tests/err
+tests/f
+tests/f1
+tests/f2
+tests/file
+tests/out

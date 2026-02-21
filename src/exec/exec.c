@@ -263,22 +263,22 @@ static int fork_pipeline(struct ast_pipeline *p, pid_t *pids)
             return 0;
         }
         pid_t pid = fork();
-        
-	if (pid < 0)
+
+        if (pid < 0)
         {
             perror("fork");
             return 0;
         }
-        
-	if (pid == 0)
+
+        if (pid == 0)
             exec_child(p, i, prev_fd, pipefd, pids);
-        
-	pids[i] = pid;
-        
-	if (prev_fd != -1)
+
+        pids[i] = pid;
+
+        if (prev_fd != -1)
             close(prev_fd);
-        
-	if (i + 1 < p->count)
+
+        if (i + 1 < p->count)
         {
             close(pipefd[1]);
             prev_fd = pipefd[0];
