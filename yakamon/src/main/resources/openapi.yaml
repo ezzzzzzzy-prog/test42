@@ -1,0 +1,537 @@
+---
+openapi: 3.1.0
+tags:
+  - name: Game
+  - name: Inventory
+  - name: Player
+  - name: Team
+  - name: Yakadex
+components:
+  schemas:
+    CollectResponse:
+      type: object
+      properties:
+        tileType:
+          $ref: "#/components/schemas/TileType"
+    Collectible:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/CollectibleType"
+        value:
+          type: string
+    CollectibleType:
+      type: string
+      enum:
+        - ITEM
+        - YAKAMON
+    Direction:
+      type: string
+      enum:
+        - UP
+        - RIGHT
+        - DOWN
+        - LEFT
+    ElementType:
+      type: string
+      enum:
+        - BUG
+        - DARK
+        - ELECTRIC
+        - FAIRY
+        - FIGHTING
+        - FIRE
+        - FLYING
+        - GHOST
+        - GRASS
+        - GROUND
+        - ICE
+        - NORMAL
+        - POISON
+        - PSYCHIC
+        - ROCK
+        - STEEL
+        - WATER
+        - DRAGON
+        - STELLAR
+    FeedRequest:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          format: int32
+    InventoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+    Item:
+      type: object
+      properties:
+        itemType:
+          $ref: "#/components/schemas/ItemType"
+        quantity:
+          type: integer
+          format: int32
+    ItemType:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - ITEM
+        value:
+          type: string
+          enum:
+            - YAKABALL
+            - SCROOGE
+            - NONE
+    LocalDateTime:
+      type: string
+      format: date-time
+      examples:
+        - 2022-03-10T12:15:50
+    MoveRequest:
+      type: object
+      properties:
+        direction:
+          $ref: "#/components/schemas/Direction"
+    MoveResponse:
+      type: object
+      properties:
+        posX:
+          type: integer
+          format: int32
+        posY:
+          type: integer
+          format: int32
+    PlayerResponse:
+      type: object
+      properties:
+        uuid:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+        posX:
+          type: integer
+          format: int32
+        posY:
+          type: integer
+          format: int32
+        lastMove:
+          $ref: "#/components/schemas/LocalDateTime"
+        lastCollect:
+          $ref: "#/components/schemas/LocalDateTime"
+        lastCatch:
+          $ref: "#/components/schemas/LocalDateTime"
+        lastFeed:
+          $ref: "#/components/schemas/LocalDateTime"
+    RenameRequest:
+      type: object
+      properties:
+        newNickname:
+          type: string
+    StartRequest:
+      type: object
+      properties:
+        mapPath:
+          type: string
+        playerName:
+          type: string
+    StartResponse:
+      type: object
+      properties:
+        tiles:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/TileType"
+    TerrainType:
+      type: string
+      enum:
+        - GRASS
+        - MOUNTAIN
+        - ROCK
+        - SAND
+        - WATER
+        - LAVA
+    TileType:
+      type: object
+      properties:
+        terrainType:
+          $ref: "#/components/schemas/TerrainType"
+        collectible:
+          $ref: "#/components/schemas/Collectible"
+    UUID:
+      type: string
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+    YakadexEntryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        firstType:
+          $ref: "#/components/schemas/ElementType"
+        secondType:
+          $ref: "#/components/schemas/ElementType"
+        evolveThreshold:
+          type: integer
+          format: int32
+        evolutionId:
+          type: integer
+          format: int32
+        caught:
+          type: boolean
+        description:
+          type: string
+    YakadexResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/YakadexEntryResponse"
+    YakamonResponse:
+      type: object
+      properties:
+        uuid:
+          $ref: "#/components/schemas/UUID"
+        nickname:
+          type: string
+        yakadexId:
+          type: integer
+          format: int32
+        energyPoints:
+          type: integer
+          format: int32
+    YakamonTeamResponse:
+      type: object
+      properties:
+        yakamons:
+          type: array
+          items:
+            $ref: "#/components/schemas/YakamonResponse"
+paths:
+  /catch:
+    post:
+      summary: Catch Yakamon
+      description: Attempt to catch a Yakamon at the player's current position.
+      tags:
+        - Player
+      responses:
+        "200":
+          description: Yakamon successfully caught.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakamonResponse"
+        "400":
+          description: "No Yakamon at the current position, not enough Yakaballs,\
+            \ team is full or the game is not running."
+        "429":
+          description: Player has recently caught a yakamon and must wait.
+      servers:
+        - url: http://localhost:8081
+  /collect:
+    post:
+      summary: Collect resources
+      description: |-
+        Collect the available resource on the player's current tile and sends back
+        the updated tile. The player **must** not have collected too recently.
+        You **must** send back the updated tile.
+      tags:
+        - Player
+      responses:
+        "200":
+          description: Resource successfully collected into the inventory.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectResponse"
+        "400":
+          description: Invalid tile or the game is not running.
+        "429":
+          description: Player has recently collected and must wait before collecting
+            again.
+      servers:
+        - url: http://localhost:8081
+  /inventory:
+    get:
+      summary: Retrieve all information about the player's inventory
+      description: Fetch all available items in the player's inventory.
+      tags:
+        - Inventory
+      responses:
+        "200":
+          description: Inventory successfully retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryResponse"
+        "400":
+          description: The game is not running.
+      servers:
+        - url: http://localhost:8081
+  /move:
+    post:
+      summary: Move player
+      description: "Move the player in the specified direction (left, right, up, or\
+        \ down). The requested direction **must** be valid and the player **must**\
+        \ not have moved too recently."
+      tags:
+        - Player
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveRequest"
+        required: true
+      responses:
+        "200":
+          description: Player successfully moved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoveResponse"
+        "400":
+          description: Invalid direction or the game is not running.
+        "429":
+          description: Player has recently moved and must wait before moving again.
+      servers:
+        - url: http://localhost:8081
+  /player:
+    get:
+      summary: Retrieve player information
+      description: Fetch information about the current player.
+      tags:
+        - Player
+      responses:
+        "200":
+          description: Player information successfully retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerResponse"
+        "400":
+          description: The game is not running.
+      servers:
+        - url: http://localhost:8081
+  /start:
+    post:
+      summary: Start the game
+      description: Clear all the database tables. Initialize and start the game.
+      tags:
+        - Game
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartRequest"
+        required: true
+      responses:
+        "200":
+          description: The game started successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartResponse"
+        "400":
+          description: Invalid `path` or invalid `name` provided.
+      servers:
+        - url: http://localhost:8081
+  /team:
+    get:
+      summary: Retrieve the yakamons in the player's team
+      description: Fetch all yakamons currently in the player's team.
+      tags:
+        - Team
+      responses:
+        "200":
+          description: Player's team successfully retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakamonTeamResponse"
+        "400":
+          description: The game is not running.
+      servers:
+        - url: http://localhost:8081
+  /team/{uuid}/evolve:
+    post:
+      summary: Evolve a yakamon from the player's team
+      description: Evolve a yakamon from the player's team. The yakamon **must** have
+        enough energy points to evolve to the next form.
+      tags:
+        - Team
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: Yakamon successfully evolved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakamonResponse"
+        "400":
+          description: The game is not running or the yakamon needs more energy points
+            to evolve.
+        "404":
+          description: The yakamon was not found in the team or reached its maximum
+            evolution tier.
+      servers:
+        - url: http://localhost:8081
+  /team/{uuid}/feed:
+    post:
+      summary: Feed a yakamon in the player's team
+      description: Feed a yakamon in the player's team. The player **must** have enough
+        ``Scrooge`` in his inventory.
+      tags:
+        - Team
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedRequest"
+        required: true
+      responses:
+        "200":
+          description: Yakamon successfully fed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakamonResponse"
+        "400":
+          description: "Not enough Scrooge, invalid amount (.i.e <= 0) or the game\
+            \ is not running."
+        "404":
+          description: The yakamon was not found in the team.
+        "429":
+          description: Player has recently fed a yakamon and must wait before feed
+            one again.
+      servers:
+        - url: http://localhost:8081
+  /team/{uuid}/release:
+    delete:
+      summary: Release a yakamon into the wild
+      description: Remove a yakamon from the player's team.
+      tags:
+        - Team
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: Yakamon successfully released.
+        "400":
+          description: The game is not running.
+        "403":
+          description: The player cannot release the last yakamon that can walk on
+            the player's current tile.
+        "404":
+          description: The yakamon was not found in the team.
+      servers:
+        - url: http://localhost:8081
+  /team/{uuid}/rename:
+    patch:
+      summary: Rename a yakamon in the player's team
+      description: Change the nickname of a yakamon in the player's team. The nickname
+        **must** not be blank nor null and its length **must** be less or equal to
+        20 characters.
+      tags:
+        - Team
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameRequest"
+        required: true
+      responses:
+        "200":
+          description: The updated yakamon.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakamonResponse"
+        "400":
+          description: The game is not running or the new nickname is invalid.
+        "404":
+          description: The yakamon was not found.
+      servers:
+        - url: http://localhost:8081
+  /yakadex:
+    get:
+      summary: Retrieve all information about yakamon
+      description: Fetch information about every yakamon available in the game.
+      tags:
+        - Yakadex
+      parameters:
+        - name: only_missing
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Yakadex successfully retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakadexResponse"
+        "400":
+          description: The game is not running.
+      servers:
+        - url: http://localhost:8081
+  /yakadex/{id}:
+    get:
+      summary: Retrieve all information about a yakamon
+      description: Fetch all information about the yakamon with the specified ID.
+      tags:
+        - Yakadex
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: Yakamon successfully retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YakadexEntryResponse"
+        "400":
+          description: The game is not running.
+        "404":
+          description: This yakamon does not exist.
+      servers:
+        - url: http://localhost:8081
+info:
+  title: yakamon API
+  version: 1.0.0
